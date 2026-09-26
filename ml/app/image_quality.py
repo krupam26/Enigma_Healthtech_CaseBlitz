@@ -64,7 +64,12 @@ def assess_image_quality(image_path: str) -> ImageQualityReport:
         contour for contour in contours
         if cv2.contourArea(contour) >= page_area * 0.12
     ]
-    document_detected = bool(substantial)
+    document_detected = bool(substantial) or (
+        contrast >= 20
+        and 15 <= brightness <= 240
+        and height >= 200
+        and width >= 200
+    )
     largest = substantial[0] if substantial else None
     cropped = False
     orientation_degrees = 0.0
