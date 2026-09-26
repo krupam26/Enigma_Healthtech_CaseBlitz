@@ -15,6 +15,7 @@ from app.extraction import extract_prescription, PrescriptionExtractionError
 from app.normalization import normalize_prescription, merge_prescriptions
 from app.safety import run_safety_checks
 from app.image_quality import prepare_image_for_extraction
+from app.medical_ocr import get_ocr_status
 from app.adherence import analyze_adherence
 from app.chatbot import medication_chat
 from app.summary import generate_summary
@@ -134,7 +135,15 @@ async def _extract_uploaded_file(file: UploadFile):
                 os.remove(prepared_path)
 
 
-@app.post("/ai/extract-prescription")
+@app.get("/ai/ocr-status", summary="Check OCR provider readiness")
+def ocr_status_api():
+    return get_ocr_status()
+
+
+@app.post(
+    "/ai/extract-prescription",
+    summary="Extract one prescription image"
+)
 async def extract_prescription_api(file: UploadFile = File(...)):
     extraction, quality = await _extract_uploaded_file(file)
     return {
@@ -144,7 +153,10 @@ async def extract_prescription_api(file: UploadFile = File(...)):
     }
 
 
-@app.post("/ai/extract-prescriptions")
+@app.post(
+    "/ai/extract-prescriptions",
+    summary="Extract and merge multiple prescription pages"
+)
 async def extract_prescriptions_api(files: List[UploadFile] = File(...)):
     if not files:
         raise HTTPException(status_code=400, detail="At least one page is required.")

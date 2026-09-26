@@ -109,3 +109,12 @@ def test_upload_openapi_fields_are_binary():
     )
 
     assert upload_schema["properties"]["files"]["items"]["format"] == "binary"
+
+
+def test_ocr_status_exposes_provider_readiness():
+    response = client.get("/ai/ocr-status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["model_id"] == "khedim/Medical-Prescription-OCR"
+    assert "primary_ocr_ready" in body

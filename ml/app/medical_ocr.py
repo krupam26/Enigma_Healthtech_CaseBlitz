@@ -16,6 +16,37 @@ _processor = None
 _model = None
 
 
+def get_ocr_status(model_id: str = MODEL_ID):
+    try:
+        import importlib.util
+
+        transformers_installed = importlib.util.find_spec("transformers") is not None
+        torch_installed = importlib.util.find_spec("torch") is not None
+    except Exception:
+        transformers_installed = False
+        torch_installed = False
+
+    token_configured = False
+    try:
+        from huggingface_hub import get_token
+
+        token_configured = bool(get_token())
+    except Exception:
+        pass
+
+    return {
+        "model_id": model_id,
+        "runtime_installed": transformers_installed and torch_installed,
+        "huggingface_authenticated": token_configured,
+        "model_loaded": _model is not None and _processor is not None,
+        "primary_ocr_ready": (
+            transformers_installed
+            and torch_installed
+            and token_configured
+        )
+    }
+
+
 def _load_model(model_id: str = MODEL_ID):
     global _processor, _model
     if _processor is not None and _model is not None:
