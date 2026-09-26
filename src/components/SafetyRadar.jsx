@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, AlertTriangle, CheckCircle, Info, ExternalLink, Activity } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle } from 'lucide-react';
 import { playChime, playWarningTone } from '../utils/soundEngine';
 
 const RADAR_ITEMS = [
@@ -145,21 +145,6 @@ export default function SafetyRadar() {
               <div className="signal-detail-box">
                 <span className="detail-tag">CLINICAL EXPLANATION</span>
                 <p>{selectedBlip.detail}</p>
-              </div>
-
-              <div className="signal-source-box">
-                <span className="source-label">DATABASE EVIDENCE & PROTOCOL</span>
-                <div className="source-name">
-                  <ExternalLink size={12} className="inline-icon" />
-                  <span>{selectedBlip.source}</span>
-                </div>
-              </div>
-
-              <div className="signal-guardrail-notice">
-                <Info size={13} className="text-gold" />
-                <span>
-                  <strong>Clinical Boundary:</strong> MediCheck flags potential interactions for human clinician verification. AI does not autonomously alter medical therapy.
-                </span>
               </div>
             </div>
 
