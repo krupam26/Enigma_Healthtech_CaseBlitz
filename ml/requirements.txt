@@ -12,3 +12,5 @@ pandas
 scikit-learn
 joblib
 opencv-python-headless
+transformers
+torch

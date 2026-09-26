@@ -5,7 +5,12 @@ from PIL import Image
 
 from app.config import settings
 from app.gemini_client import generate_content_with_retry
-from app.schemas import PrescriptionExtraction
+from app.medical_ocr import (
+    MedicalOCRError,
+    extract_handwritten_text,
+    medication_candidates_from_lines
+)
+from app.schemas import Medication, PrescriptionExtraction
 
 
 class PrescriptionExtractionError(RuntimeError):
@@ -86,7 +91,7 @@ Return ONLY valid JSON matching this structure:
 """
 
 
-def extract_prescription(image_path: str) -> PrescriptionExtraction:
+def _extract_with_gemini(image_path: str) -> PrescriptionExtraction:
     image = Image.open(image_path)
 
     try:
@@ -131,3 +136,38 @@ def extract_prescription(image_path: str) -> PrescriptionExtraction:
             medication.requires_verification = True
 
     return extraction
+
+
+def _extract_with_medical_ocr(image_path: str) -> PrescriptionExtraction:
+    lines = extract_handwritten_text(
+        image_path,
+        model_id=settings.medical_ocr_model_id
+    )
+    candidates = medication_candidates_from_lines(lines)
+    if not candidates:
+        raise MedicalOCRError("Medical OCR returned no usable text.")
+
+    return PrescriptionExtraction(
+        medications=[
+            Medication(
+                name=candidate,
+                confidence=0.5,
+                requires_verification=True
+            )
+            for candidate in candidates
+        ],
+        warnings=[
+            "Medical-Prescription-OCR extracted line text. "
+            "Verify each medication and all instructions before scheduling."
+        ],
+        overall_confidence=0.5
+    )
+
+
+def extract_prescription(image_path: str) -> PrescriptionExtraction:
+    try:
+        return _extract_with_medical_ocr(image_path)
+    except MedicalOCRError:
+        # Gemini remains the compatibility fallback while the specialized
+        # model is gated, unavailable, or unable to read the line crops.
+        return _extract_with_gemini(image_path)
