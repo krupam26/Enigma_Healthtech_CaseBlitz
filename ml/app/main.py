@@ -1,7 +1,7 @@
 import os
 import shutil
 from tempfile import NamedTemporaryFile
-
+from app.adherence import predict_adherence_from_events
 from fastapi import FastAPI, File, UploadFile, HTTPException
 
 from app.extraction import extract_prescription
@@ -110,3 +110,29 @@ async def summary_api(data: dict):
     return {
         "summary": summary
     }
+@app.post("/ai/adherence-risk")
+async def adherence_risk_api(payload: dict):
+    events = payload.get("events", [])
+
+    if not isinstance(events, list):
+        raise HTTPException(
+            status_code=400,
+            detail="events must be a list"
+        )
+
+    if not events:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one adherence event is required"
+        )
+
+    try:
+        result = predict_adherence_from_events(events)
+
+        return result
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Adherence prediction failed: {str(error)}"
+        )

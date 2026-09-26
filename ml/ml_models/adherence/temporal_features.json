@@ -1,0 +1,15 @@
+[
+  "medications",
+  "history_days",
+  "scheduled_doses",
+  "observed_doses",
+  "taken_doses",
+  "missed_doses",
+  "late_doses",
+  "not_recorded_doses",
+  "evening_misses",
+  "weekend_misses",
+  "consecutive_missed_max",
+  "average_delay_hours",
+  "adherence_rate"
+]
