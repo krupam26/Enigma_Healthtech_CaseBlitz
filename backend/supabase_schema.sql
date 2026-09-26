@@ -6,9 +6,10 @@
 -- Enable UUID extension if not enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. PROFILES (Extends auth.users)
+-- 1. PROFILES (Can link to auth.users or standalone UUID)
 CREATE TABLE IF NOT EXISTS public.profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT,
     full_name TEXT NOT NULL,
     role TEXT CHECK (role IN ('PATIENT', 'CAREGIVER')) DEFAULT 'PATIENT',
     chronic_conditions TEXT[] DEFAULT '{}',
