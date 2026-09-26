@@ -1,10 +1,13 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    # Load .env file from backend root
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    load_dotenv(dotenv_path=env_path)
+except ImportError:
+    pass
 
-# Load .env file from backend root
-env_path = Path(__file__).resolve().parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
 
 class Settings:
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
@@ -24,3 +27,4 @@ class Settings:
         )
 
 settings = Settings()
+

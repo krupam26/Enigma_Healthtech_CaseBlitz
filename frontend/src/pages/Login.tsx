@@ -1,36 +1,22 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../services/store'
-import { useT } from '../hooks/useT'
-import { api } from '../services/api'
+import { signIn } from '../services/auth'
 import Pill3D from '../components/Pill3D'
-import LangSwitcher from '../components/LangSwitcher'
 
 export default function Login() {
-  const t = useT()
   const login = useStore((s) => s.login)
   const profileComplete = useStore((s) => s.profileComplete)
   const navigate = useNavigate()
-
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const [touched, setTouched] = useState(false)
-
-  // Forgot password modal state
-  const [showForgotModal, setShowForgotModal] = useState(false)
-  const [forgotEmail, setForgotEmail] = useState('')
-  const [forgotStatus, setForgotStatus] = useState<'idle' | 'loading' | 'sent'>('idle')
-  const [forgotMessage, setForgotMessage] = useState('')
+  const [error, setError] = useState('')
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     setTouched(true)
-    setError('')
     if (!email || !password) return
-
-    setLoading(true)
     try {
       const res = await api.login(email, password)
       login({ email, role: 'PATIENT' }) // Default fallback if no profile data, the Navbar will check user.role
@@ -76,22 +62,14 @@ export default function Login() {
       setForgotStatus('sent')
       setForgotMessage(res.message || t('auth.resetSent'))
     } catch (err) {
-      setForgotStatus('sent')
-      setForgotMessage(`Password reset link sent to ${forgotEmail}. Please check your email.`)
+      setError(err instanceof Error ? err.message : 'Unable to sign in.')
     }
   }
 
   return (
     <div className="min-h-screen grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-      {/* Left visual column */}
-      <div className="bg-gradient-to-br from-teal-950 to-teal-700 hidden md:flex items-center justify-center p-8">
-        <div className="text-center">
-          <Pill3D progress={0} height={380} />
-          <h2 className="text-white text-2xl font-bold mt-4 tracking-tight">MedCheck HealthTech</h2>
-          <p className="text-teal-200 text-sm max-w-sm mt-1.5 mx-auto">
-            Safe, verified medication schedules and drug interaction checks.
-          </p>
-        </div>
+      <div className="bg-gradient-to-br from-teal-950 to-teal-700 flex items-center justify-center">
+        <Pill3D progress={0} height={420} />
       </div>
 
       {/* Right form column */}
@@ -153,41 +131,10 @@ export default function Login() {
                 style={touched && !email ? { borderColor: '#B5453B' } : {}}
               />
             </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('auth.password')}</label>
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 text-base rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600"
-                style={touched && !password ? { borderColor: '#B5453B' } : {}}
-              />
+            <div className="text-right mt-2">
+              <button type="button" className="text-[13px] text-teal-700 font-semibold" onClick={() => alert('Password reset link sent (demo)')}>Forgot password?</button>
             </div>
-
-            <div className="text-right">
-              <button
-                type="button"
-                className="text-sm text-teal-700 hover:text-teal-900 font-semibold transition-colors"
-                onClick={() => {
-                  setForgotEmail(email)
-                  setForgotStatus('idle')
-                  setShowForgotModal(true)
-                }}
-              >
-                {t('auth.forgotPassword')}
-              </button>
-            </div>
-
-            <button
-              className="btn-primary w-full py-3.5 text-base font-bold shadow-md hover:shadow-lg transition-all"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? 'Logging in...' : t('auth.loginBtn')}
-            </button>
+            <button className="btn-primary w-full mt-6" type="submit">Log in</button>
           </form>
 
           <div className="mt-7 text-center text-sm text-slate-600">
@@ -198,70 +145,6 @@ export default function Login() {
           </div>
         </div>
       </div>
-
-      {/* Forgot Password Modal */}
-      {showForgotModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-xl font-bold text-teal-950">{t('auth.forgotPassword')}</h3>
-              <button
-                className="text-slate-400 hover:text-slate-700 text-2xl font-bold"
-                onClick={() => setShowForgotModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            {forgotStatus === 'sent' ? (
-              <div className="space-y-4">
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-sm">
-                  ✅ {forgotMessage}
-                </div>
-                <button
-                  className="btn-primary w-full py-3"
-                  onClick={() => setShowForgotModal(false)}
-                >
-                  Done
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleForgotSubmit} className="space-y-4">
-                <p className="text-sm text-slate-600">
-                  Enter your email address and we will send you instructions to reset your password.
-                </p>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">{t('auth.email')}</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="you@example.com"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 text-base"
-                  />
-                </div>
-                <div className="flex gap-2.5 pt-2">
-                  <button
-                    type="button"
-                    className="btn-ghost flex-1 py-2.5"
-                    onClick={() => setShowForgotModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-primary flex-1 py-2.5"
-                    disabled={forgotStatus === 'loading'}
-                  >
-                    {forgotStatus === 'loading' ? 'Sending...' : 'Send Reset Link'}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
