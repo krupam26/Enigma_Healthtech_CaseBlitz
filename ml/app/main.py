@@ -116,10 +116,11 @@ async def _extract_uploaded_file(file: UploadFile):
                     "error": "prescription_extraction_unavailable",
                     "manual_entry_required": True,
                     "message": (
-                        "Please upload the image again. If the image is "
-                        "clear but extraction still fails, enter the "
-                        "medication name manually and verify the remaining "
-                        "instructions."
+                        "Medical OCR and Gemini could not extract this "
+                        "image. "
+                        " then upload the image again. If it still "
+                        "fails, enter the medication name manually and "
+                        "verify the remaining instructions."
                     ),
                     "manual_entry_endpoint": "/ai/manual-medication"
                 }

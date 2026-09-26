@@ -51,3 +51,25 @@ def test_gemini_is_fallback_when_specialized_ocr_is_unavailable(
     assert result.medications[0].name == "Metformin"
     assert result.medications[0].requires_verification is True
     assert result.extraction_source == "gemini"
+
+
+def test_both_provider_failures_return_clear_error(monkeypatch, tmp_path):
+    image_path = tmp_path / "prescription.png"
+    Image.new("RGB", (400, 200), "white").save(image_path)
+    monkeypatch.setattr(
+        "app.extraction.extract_handwritten_text",
+        lambda path, **kwargs: (_ for _ in ()).throw(
+            medical_ocr.MedicalOCRError("HF unavailable")
+        )
+    )
+    monkeypatch.setattr(
+        "app.extraction.generate_content_with_retry",
+        lambda contents: (_ for _ in ()).throw(RuntimeError("Gemini quota"))
+    )
+
+    try:
+        extract_prescription(str(image_path))
+    except Exception as error:
+        assert "Medical-Prescription-OCR nor Gemini" in str(error)
+    else:
+        raise AssertionError("Expected both-provider extraction failure")

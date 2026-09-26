@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 from PIL import Image
@@ -15,6 +16,9 @@ from app.schemas import Medication, PrescriptionExtraction
 
 class PrescriptionExtractionError(RuntimeError):
   """Raised when prescription extraction is unavailable or invalid."""
+
+
+logger = logging.getLogger(__name__)
 
 
 EXTRACTION_PROMPT = """
@@ -169,7 +173,13 @@ def _extract_with_medical_ocr(image_path: str) -> PrescriptionExtraction:
 def extract_prescription(image_path: str) -> PrescriptionExtraction:
     try:
         return _extract_with_medical_ocr(image_path)
-    except MedicalOCRError:
-        # Gemini remains the compatibility fallback while the specialized
-        # model is gated, unavailable, or unable to read the line crops.
-        return _extract_with_gemini(image_path)
+    except MedicalOCRError as ocr_error:
+        logger.warning("Medical OCR unavailable; trying Gemini fallback: %s", ocr_error)
+        try:
+            return _extract_with_gemini(image_path)
+        except PrescriptionExtractionError as gemini_error:
+            raise PrescriptionExtractionError(
+                "Neither Medical-Prescription-OCR nor Gemini could extract "
+                "the prescription. Authenticate Hugging Face or check the "
+                "Gemini API quota, then upload the image again."
+            ) from gemini_error
