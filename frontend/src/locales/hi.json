@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "home": "होम",
+    "howItWorks": "यह कैसे काम करता है",
+    "features": "विशेषताएँ",
+    "safety": "सुरक्षा",
+    "caregiver": "देखभालकर्ता",
+    "about": "परिचय",
+    "login": "लॉग इन करें",
+    "getStarted": "शुरू करें",
+    "menu": "मेन्यू"
+  },
+  "hero": {
+    "eyebrow": "एआई-सहायित दवा प्रबंधन",
+    "title": "दवा, अब समझ में आती है।",
+    "description": "प्रिस्क्रिप्शन, दवाइयाँ, रिमाइंडर और सुरक्षा — सब एक ही जगह पर प्रबंधित करें।",
+    "getStarted": "शुरू करें",
+    "explore": "मेडचेक देखें"
+  },
+  "sidebar": {
+    "home": "होम",
+    "medications": "दवाइयाँ",
+    "schedule": "समय-सारणी",
+    "prescriptions": "प्रिस्क्रिप्शन",
+    "adherence": "पालन",
+    "safety": "सुरक्षा",
+    "assistant": "एआई सहायक",
+    "caregiver": "देखभालकर्ता",
+    "profile": "प्रोफ़ाइल",
+    "settings": "सेटिंग्स",
+    "logout": "लॉग आउट"
+  },
+  "dashboard": {
+    "greeting": "आपसे मिलकर अच्छा लगा",
+    "todaysProgress": "आज की प्रगति",
+    "missedToday": "आज छूटी हुई",
+    "nextMedication": "अगली दवा",
+    "activeMedications": "सक्रिय दवाइयाँ",
+    "timeline": "आज की समय-सूची",
+    "safetyAlerts": "सुरक्षा अलर्ट",
+    "caregiverStatus": "देखभालकर्ता स्थिति",
+    "aiInsight": "एआई सुझाव",
+    "markTaken": "ली गई चिह्नित करें",
+    "markMissed": "छूट गई"
+  },
+  "medications": {
+    "title": "दवाइयाँ",
+    "add": "दवा जोड़ें",
+    "edit": "संपादित करें",
+    "pause": "रोकें",
+    "resume": "पुनः शुरू करें",
+    "discontinue": "बंद करें",
+    "taken": "ली गई",
+    "missed": "छूट गई"
+  },
+  "safety": {
+    "title": "सुरक्षा",
+    "warning": "सत्यापन आवश्यक",
+    "noFlag": "कोई चिंता नहीं मिली",
+    "review": "समीक्षा करें",
+    "risk": "संभावित जोखिम",
+    "urgent": "तत्काल ध्यान दें"
+  },
+  "caregiver": { "title": "देखभालकर्ता" },
+  "assistant": { "title": "एआई सहायक" },
+  "profile": { "title": "प्रोफ़ाइल" },
+  "settings": { "title": "सेटिंग्स" },
+  "common": {
+    "save": "बदलाव सहेजें",
+    "cancel": "रद्द करें",
+    "continue": "जारी रखें",
+    "skipForNow": "अभी छोड़ें",
+    "backHome": "मेडचेक पर वापस जाएँ"
+  }
+}

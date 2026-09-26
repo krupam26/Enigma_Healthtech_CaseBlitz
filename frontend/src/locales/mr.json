@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "home": "मुख्यपृष्ठ",
+    "howItWorks": "हे कसे कार्य करते",
+    "features": "वैशिष्ट्ये",
+    "safety": "सुरक्षा",
+    "caregiver": "काळजीवाहक",
+    "about": "आमच्याबद्दल",
+    "login": "लॉग इन करा",
+    "getStarted": "सुरू करा",
+    "menu": "मेनू"
+  },
+  "hero": {
+    "eyebrow": "एआय-सहाय्यित औषध व्यवस्थापन",
+    "title": "औषध, आता समजते.",
+    "description": "प्रिस्क्रिप्शन, औषधे, स्मरणपत्रे आणि सुरक्षितता — सर्व एकाच ठिकाणी सांभाळा.",
+    "getStarted": "सुरू करा",
+    "explore": "मेडचेक पहा"
+  },
+  "sidebar": {
+    "home": "मुख्यपृष्ठ",
+    "medications": "औषधे",
+    "schedule": "वेळापत्रक",
+    "prescriptions": "प्रिस्क्रिप्शन",
+    "adherence": "पालन",
+    "safety": "सुरक्षा",
+    "assistant": "एआय सहाय्यक",
+    "caregiver": "काळजीवाहक",
+    "profile": "प्रोफाइल",
+    "settings": "सेटिंग्ज",
+    "logout": "लॉग आउट"
+  },
+  "dashboard": {
+    "greeting": "तुम्हाला भेटून आनंद झाला",
+    "todaysProgress": "आजची प्रगती",
+    "missedToday": "आज चुकलेली",
+    "nextMedication": "पुढील औषध",
+    "activeMedications": "सक्रिय औषधे",
+    "timeline": "आजचे वेळापत्रक",
+    "safetyAlerts": "सुरक्षा सूचना",
+    "caregiverStatus": "काळजीवाहक स्थिती",
+    "aiInsight": "एआय सूचना",
+    "markTaken": "घेतले म्हणून चिन्हांकित करा",
+    "markMissed": "चुकले"
+  },
+  "medications": {
+    "title": "औषधे",
+    "add": "औषध जोडा",
+    "edit": "संपादित करा",
+    "pause": "थांबवा",
+    "resume": "पुन्हा सुरू करा",
+    "discontinue": "बंद करा",
+    "taken": "घेतले",
+    "missed": "चुकले"
+  },
+  "safety": {
+    "title": "सुरक्षा",
+    "warning": "पडताळणी आवश्यक",
+    "noFlag": "कोणतीही चिंता आढळली नाही",
+    "review": "पुनरावलोकन करा",
+    "risk": "संभाव्य धोका",
+    "urgent": "तातडीने लक्ष द्या"
+  },
+  "caregiver": { "title": "काळजीवाहक" },
+  "assistant": { "title": "एआय सहाय्यक" },
+  "profile": { "title": "प्रोफाइल" },
+  "settings": { "title": "सेटिंग्ज" },
+  "common": {
+    "save": "बदल जतन करा",
+    "cancel": "रद्द करा",
+    "continue": "सुरू ठेवा",
+    "skipForNow": "आत्ता वगळा",
+    "backHome": "मेडचेककडे परत जा"
+  }
+}

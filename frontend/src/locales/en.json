@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "home": "Home",
+    "howItWorks": "How It Works",
+    "features": "Features",
+    "safety": "Safety",
+    "caregiver": "Caregiver",
+    "about": "About",
+    "login": "Log in",
+    "getStarted": "Get Started",
+    "menu": "Menu"
+  },
+  "hero": {
+    "eyebrow": "AI-assisted medication management",
+    "title": "Medication, understood.",
+    "description": "Manage prescriptions, medications, reminders and safety in one place.",
+    "getStarted": "Get Started",
+    "explore": "Explore MedCheck"
+  },
+  "sidebar": {
+    "home": "Home",
+    "medications": "Medications",
+    "schedule": "Schedule",
+    "prescriptions": "Prescriptions",
+    "adherence": "Adherence",
+    "safety": "Safety",
+    "assistant": "AI Assistant",
+    "caregiver": "Caregiver",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Log out"
+  },
+  "dashboard": {
+    "greeting": "Good to see you",
+    "todaysProgress": "Today's progress",
+    "missedToday": "Missed today",
+    "nextMedication": "Next medication",
+    "activeMedications": "Active medications",
+    "timeline": "Today's timeline",
+    "safetyAlerts": "Safety alerts",
+    "caregiverStatus": "Caregiver status",
+    "aiInsight": "AI insight",
+    "markTaken": "Mark taken",
+    "markMissed": "Missed"
+  },
+  "medications": {
+    "title": "Medications",
+    "add": "Add medication",
+    "edit": "Edit",
+    "pause": "Pause",
+    "resume": "Resume",
+    "discontinue": "Discontinue",
+    "taken": "Taken",
+    "missed": "Missed"
+  },
+  "safety": {
+    "title": "Safety",
+    "warning": "Needs verification",
+    "noFlag": "No flag identified",
+    "review": "Review",
+    "risk": "Potential risk",
+    "urgent": "Urgent attention"
+  },
+  "caregiver": { "title": "Caregiver" },
+  "assistant": { "title": "AI Assistant" },
+  "profile": { "title": "Profile" },
+  "settings": { "title": "Settings" },
+  "common": {
+    "save": "Save changes",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "skipForNow": "Skip for now",
+    "backHome": "Back to MedCheck"
+  }
+}
