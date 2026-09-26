@@ -1,0 +1,170 @@
+prescription reading issue 
+reminders simple in his language , maybe even voice based reminders 
+caregiver to know quickly, if he took meds or not via notification 
+explain in terms of food , also describe medicine maybe with image if he forgets which one to take 
+quick and easy mark as done for meds 
+if multiple meds due to sudden health issue, easy adding that info, and know if any change in current med schedule , any dawai can have side effects 
+have a section where u keep common sideeffects and packet images of meds as well meds taking time in the app for checking by both ends 
+chatbot to talk 
+Clear explanation of what each drug does
+Immediate answer to "I vomited after taking it — do I retake?"
+Strict schedule, tapering support
+caregiver side : A dashboard that just says ✅ or ❌ for today. That's it. She doesn't need to see the medicine names or doses necessarily. Just: did he take it or not.
+She is effectively the patient's proxy — she marks doses as taken, she adds new medicines
+Needs reminders: "Dad hasn't marked his 8pm medicine yet" to caregiver 
+streak of meds and friendly zomato/duolingo types notifications
+   16. The primary patient may not be the primary app user.
+Meena (caregiver-spouse) may be the one using the app on behalf of Ramesh. Design for this. The "patient" account should allow a caregiver to operate it fully if the patient consents.
+Voice output isn't a nice-to-have. It's core for Type 1 patients.
+Ramesh cannot squint at a timeline. He needs the app to tell him: "Ramesh ji, abhi aapki Metformin lene ka samay hai." Web Speech API. 30 minutes to build. Do it.
+The caregiver's primary question is binary: did they take it or not.
+Priya doesn't want a medical dashboard. She wants a green tick or a red cross. Don't over-engineer the caregiver view.
+ 19. Consent isn't a compliance feature — it's emotionally real.
+Ramesh might be embarrassed about a psychiatric medication. His daughter doesn't need to see that. The toggle isn't a legal checkbox — it's respecting his dignity. Frame it that way in your pitch.
+ "Learned people" — no. Assume minimum literacy for the patient side.
+Your UI language should be: large text, simple words, visual icons alongside text, Hindi/Marathi at minimum as a chatbot option. The caregiver (Priya, Rohan) is probably more tech-comfortable and can handle a richer dashboard.
+The chatbot's real user is Meena and Priya, not Ramesh.
+Ramesh will use voice output. Meena might type: "what does this medicine do?" Priya might ask: "he missed two doses, is that dangerous?" Design chatbot prompts around these actual questions.
+1. Prescription photo upload
+2. AI/OCR prescription extraction
+3. Manual medication entry fallback
+4. User correction/editing of extracted fields
+5. Medication name normalization
+6. Dose/strength extraction
+7. Frequency extraction
+8. Timing extraction
+9. Food relationship
+10. Medication timeline grouped by time slot
+11. Prescription source/doctor tagging
+12. Basic medication update/dose change
+13. Medication reminders/notifications
+14. Mark medication as *Taken*
+15. Mark medication as *Missed*
+16. *NOT_RECORDED* state
+17. Adherence percentage
+18. Missed-dose tracking
+19. Repeated missed-dose detection
+20. Caregiver escalation after repeated misses
+21. Missed-dose guidance
+22. Deterministic "what should I do?" logic
+23. "Don't double dose" safety warning
+24. Duplicate medication detection
+25. Duplicate active-ingredient detection
+26. Cross-prescription medication checking
+27. Temporary/self-added medication flow
+28. Curated medication interaction engine
+29. Explainable safety alerts
+30. Plain-language explanation of safety warning
+31. "Consult healthcare professional" escalation
+32. Caregiver linking
+33. Patient-controlled caregiver permissions
+34. Consent/visibility checklist
+35. Read-only caregiver dashboard
+36. Adherence visibility
+37. Medication-detail visibility control
+38. Repeated-missed-dose caregiver notification
+39. Prescription understanding
+40. Medication explanation
+41. Medication-specific Q&A
+42. Plain-language explanations
+43. AI confidence/uncertainty handling
+44. Adherence pattern chart
+45. More detailed adherence insights
+46. Streak
+47. Refill estimate
+48. Voice output using Web Speech API
+49. Hindi/Marathi medication explanation
+50. Larger accessibility controls
+51. More advanced notification customization
+52. Illegible prescription
+53. Blurry image
+54. Poor lighting/glare
+55. Cropped prescription
+56. Ambiguous medication name
+57. Incorrect OCR extraction
+58. Unknown medication
+59. Missing dose
+60. Missing frequency
+61. Missing timing
+62. Missing food relationship
+63. Conflicting prescription instructions
+64. Multi-page prescription 
+ flag uncertainty → let user edit → don't silently guess.
+14. Same medicine at different doses at different times
+15. Brand vs generic name
+16. Same active ingredient under different brand names
+17. Multiple doctors prescribing medications
+18. Multiple active prescriptions
+19. New medication added to existing regimen
+20. Medication changed mid-treatment
+21. Medication stopped early
+22. Antibiotic course stopped early
+23. Short-term medication
+24. Long-term medication
+25. SOS medication
+26. Liquid medication / different units
+27. Variable/tapering dose
+
+28. Patient gets fever/pain/etc.
+29. Patient self-adds an OTC medicine
+30. Patient buys medicine from a chemist
+31. Patient doesn't tell their doctor
+32. New medication interacts with existing medication
+33. Patient wants to know whether they can take a new medicine
+
+*Response:* add medication → run safety check → explain signal → escalate appropriately.
+42. Patient misses one dose
+43. Patient misses multiple doses
+44. Patient forgets whether they took it
+45. Dose is only slightly late
+46. Dose is very late
+47. Next dose is approaching
+48. Patient considers taking two doses
+49. Repeated evening misses
+50. Repeated misses across several days
+
+Your core state machine:
+
+text
+SCHEDULED
+    ↓
+ ┌───────────────┐
+ ↓       ↓       ↓
+TAKEN   MISSED   NOT_RECORDED
+          ↓
+    Missed-dose guidance
+          ↓
+   repeated/unresolved?
+       ↓        ↓
+      No       Yes
+                ↓
+        Caregiver alert
+
+
+---
+text
+Prescription Upload
+       ↓
+AI Extraction
+       ↓
+Low-confidence field
+       ↓
+User Corrects It
+       ↓
+Medication Timeline
+       ↓
+Reminder
+       ↓
+Taken / Missed
+       ↓
+Add OTC Medication
+       ↓
+Interaction Alert
+       ↓
+Adherence Problem
+       ↓
+Repeated Miss
+       ↓
+Caregiver Alert
+       ↓
+Consent-controlled Dashboard

@@ -8,3 +8,6 @@ google-genai
 Pillow
 rapidfuzz
 pytest
+pandas
+scikit-learn
+joblib

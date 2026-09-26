@@ -4,7 +4,8 @@ from tempfile import NamedTemporaryFile
 from app.adherence import (
     predict_adherence_from_events,
     analyze_adherence,
-    generate_support_message
+    generate_support_message,
+    caregiver_support_action
 )
 from fastapi import FastAPI, File, UploadFile, HTTPException
 
@@ -14,6 +15,14 @@ from app.safety import run_safety_checks
 from app.adherence import analyze_adherence
 from app.chatbot import medication_chat
 from app.summary import generate_summary
+from app.schemas import (
+    AdherenceEventsRequest,
+    ChatRequest,
+    SummaryRequest,
+    PrescriptionAdherenceRequest,
+    PrescriptionExtraction
+)
+from app.pipeline import prescription_to_adherence_events
 
 
 app = FastAPI(
@@ -77,30 +86,18 @@ async def extract_prescription_api(
 
 
 @app.post("/ai/analyze-adherence")
-async def adherence_api(data: dict):
-    events = data.get("events", [])
+async def adherence_api(data: AdherenceEventsRequest):
+    events = [event.model_dump() for event in data.events]
 
     return analyze_adherence(events)
 
 
 @app.post("/ai/chat")
-async def chat_api(data: dict):
-    question = data.get("question")
-    medication_context = data.get(
-        "medication_context",
-        ""
-    )
-
-    if not question:
-        raise HTTPException(
-            status_code=400,
-            detail="Question is required."
-        )
-
-    answer = medication_chat(
-        question,
-        medication_context
-    )
+async def chat_api(data: ChatRequest):
+    try:
+        answer = medication_chat(data.question, data.medication_context)
+    except Exception as error:
+        raise HTTPException(status_code=502, detail="Chat service unavailable") from error
 
     return {
         "answer": answer
@@ -108,55 +105,31 @@ async def chat_api(data: dict):
 
 
 @app.post("/ai/generate-summary")
-async def summary_api(data: dict):
-    summary = generate_summary(data)
+async def summary_api(data: SummaryRequest):
+    summary = generate_summary(data.model_dump())
 
     return {
         "summary": summary
     }
 @app.post("/ai/adherence-risk")
-async def adherence_risk_api(payload: dict):
-    events = payload.get("events", [])
-
-    if not isinstance(events, list):
-        raise HTTPException(
-            status_code=400,
-            detail="events must be a list"
-        )
-
-    if not events:
-        raise HTTPException(
-            status_code=400,
-            detail="At least one adherence event is required"
-        )
-
+async def adherence_risk_api(payload: AdherenceEventsRequest):
+    events = [event.model_dump() for event in payload.events]
     try:
         result = predict_adherence_from_events(events)
+        result["caregiver_action"] = caregiver_support_action(
+            result["prediction"]["support_risk"]
+        )
 
         return result
 
+    except (ValueError, KeyError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Adherence prediction failed: {str(error)}"
-        )
+        raise HTTPException(status_code=500, detail="Adherence prediction failed") from error
 
 @app.post("/ai/adherence-summary")
-async def adherence_summary_api(payload: dict):
-    events = payload.get("events", [])
-
-    if not isinstance(events, list):
-        raise HTTPException(
-            status_code=400,
-            detail="events must be a list"
-        )
-
-    if not events:
-        raise HTTPException(
-            status_code=400,
-            detail="At least one adherence event is required"
-        )
-
+async def adherence_summary_api(payload: AdherenceEventsRequest):
+    events = [event.model_dump() for event in payload.events]
     try:
         summary = analyze_adherence(events)
 
@@ -172,12 +145,24 @@ async def adherence_summary_api(payload: dict):
             "percentage": summary["percentage"],
             "patterns": summary["patterns"],
             "support_risk": support_risk,
+            "caregiver_action": caregiver_support_action(support_risk),
             "risk_probabilities": prediction["prediction"]["probabilities"],
             "support_message": support_message
         }
 
+    except (ValueError, KeyError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Adherence summary failed: {str(error)}"
-        )
+        raise HTTPException(status_code=500, detail="Adherence summary failed") from error
+
+
+@app.post("/ai/prescription-adherence-events")
+async def prescription_adherence_events_api(
+    payload: PrescriptionAdherenceRequest
+):
+    extraction = PrescriptionExtraction(medications=payload.medications)
+    return prescription_to_adherence_events(
+        extraction,
+        payload.start_date,
+        payload.days
+    )

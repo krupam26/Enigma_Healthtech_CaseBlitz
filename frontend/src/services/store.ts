@@ -12,11 +12,14 @@ interface Store extends AppState {
   logout: () => void
   saveProfile: (patch: Partial<UserProfile>) => void
   completeProfile: () => void
+  syncSchedule: () => void
   markDose: (eventId: string, status: DoseStatus) => void
+  setMedications: (meds: Medication[]) => void
   addMedication: (med: Omit<Medication, 'id'>) => void
   updateMedication: (id: string, patch: Partial<Medication>) => void
-  pauseMedication: (id: string) => void
-  discontinueMedication: (id: string) => void
+  pauseMedication: (id: string, reason?: string) => void
+  discontinueMedication: (id: string, reason?: string) => void
+  removeMedication: (id: string) => void
   addCaregiver: (name: string, relation: string) => void
   toggleCaregiverPerm: (id: string, perm: keyof CaregiverPerms) => void
   revokeCaregiver: (id: string) => void
@@ -27,6 +30,40 @@ interface Store extends AppState {
 
 function persist(get: () => AppState) {
   saveToStorage(get())
+}
+
+export function syncDoseEvents(medications: Medication[], existingEvents: DoseEvent[]): DoseEvent[] {
+  const activeMeds = medications.filter((m) => m.status === 'Active')
+  const newEvents: DoseEvent[] = []
+
+  for (const med of activeMeds) {
+    const times: string[] = []
+    if (med.timing && med.timing.includes(',')) {
+      times.push(...med.timing.split(',').map((t) => t.trim()))
+    } else if (med.frequency && med.frequency.toLowerCase().includes('twice') && !med.timing?.toLowerCase().includes('and')) {
+      times.push(med.timing || '08:00 AM', '08:30 PM')
+    } else if (med.frequency && (med.frequency.toLowerCase().includes('three') || med.frequency.toLowerCase().includes('thrice'))) {
+      times.push('08:00 AM', '01:00 PM', '08:00 PM')
+    } else {
+      times.push(med.timing || '08:00 AM')
+    }
+
+    times.forEach((t, idx) => {
+      const eventId = `e-${med.id}-${idx}`
+      const existing = existingEvents.find(
+        (e) => e.medId === med.id && (e.time === t || e.id === eventId)
+      )
+      newEvents.push({
+        id: eventId,
+        medId: med.id,
+        time: t,
+        status: existing ? existing.status : 'Upcoming',
+        date: 'today',
+      })
+    })
+  }
+
+  return newEvents
 }
 
 export const useStore = create<Store>((set, get) => ({
@@ -56,33 +93,87 @@ export const useStore = create<Store>((set, get) => ({
 
   completeProfile: () => { set({ profileComplete: true }); persist(get) },
 
+  syncSchedule: () => {
+    set((s) => ({ events: syncDoseEvents(s.medications, s.events) }))
+    persist(get)
+  },
+
   markDose: (eventId, status) => {
     set((s) => ({ events: s.events.map((e) => (e.id === eventId ? { ...e, status } : e)) }))
     persist(get)
   },
 
-  addMedication: (med) => {
-    const id = 'm' + Date.now()
-    set((s) => ({ medications: [...s.medications, { ...med, id }] }))
-    persist(get)
-  },
-
-  updateMedication: (id, patch) => {
-    set((s) => ({ medications: s.medications.map((m) => (m.id === id ? { ...m, ...patch } : m)) }))
-    persist(get)
-  },
-
-  pauseMedication: (id) => {
+  setMedications: (meds) => {
     set((s) => ({
-      medications: s.medications.map((m) =>
-        m.id === id ? { ...m, status: m.status === 'Active' ? 'Paused' : 'Active' } : m
-      ),
+      medications: meds,
+      events: syncDoseEvents(meds, s.events),
     }))
     persist(get)
   },
 
-  discontinueMedication: (id) => {
-    set((s) => ({ medications: s.medications.map((m) => (m.id === id ? { ...m, status: 'Discontinued' } : m)) }))
+  addMedication: (med) => {
+    const id = 'm' + Date.now()
+    set((s) => {
+      const updated = [...s.medications, { ...med, id }]
+      return {
+        medications: updated,
+        events: syncDoseEvents(updated, s.events),
+      }
+    })
+    persist(get)
+  },
+
+  updateMedication: (id, patch) => {
+    set((s) => {
+      const updated = s.medications.map((m) => (m.id === id ? { ...m, ...patch } : m))
+      return {
+        medications: updated,
+        events: syncDoseEvents(updated, s.events),
+      }
+    })
+    persist(get)
+  },
+
+  pauseMedication: (id, reason) => {
+    set((s) => {
+      const updated = s.medications.map((m) =>
+        m.id === id
+          ? {
+              ...m,
+              status: (m.status === 'Active' ? 'Paused' : 'Active') as 'Active' | 'Paused',
+              pauseReason: reason || m.pauseReason,
+            }
+          : m
+      )
+      return {
+        medications: updated,
+        events: syncDoseEvents(updated, s.events),
+      }
+    })
+    persist(get)
+  },
+
+  discontinueMedication: (id, reason) => {
+    set((s) => {
+      const updated = s.medications.map((m) =>
+        m.id === id ? { ...m, status: 'Discontinued' as const, discontinueReason: reason || m.discontinueReason } : m
+      )
+      return {
+        medications: updated,
+        events: syncDoseEvents(updated, s.events),
+      }
+    })
+    persist(get)
+  },
+
+  removeMedication: (id) => {
+    set((s) => {
+      const updated = s.medications.filter((m) => m.id !== id)
+      return {
+        medications: updated,
+        events: syncDoseEvents(updated, s.events),
+      }
+    })
     persist(get)
   },
 
