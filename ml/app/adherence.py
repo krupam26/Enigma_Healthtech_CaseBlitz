@@ -72,7 +72,25 @@ def predict_support_risk(features: dict):
         "probabilities": probability_map
     }
 
+def deduplicate_events(events):
+    deduplicated = {}
+    for event in events:
+        dose_id = event.get("dose_id")
+        if dose_id is None:
+            dose_id = "|".join([
+                str(event.get("patient_id", "")),
+                str(event.get("medication", "")).strip().lower(),
+                str(event.get("scheduled_time", ""))
+            ])
+        deduplicated[dose_id] = event
+    return sorted(
+        deduplicated.values(),
+        key=lambda event: str(event.get("scheduled_time", ""))
+    )
+
+
 def build_adherence_features(events):
+    events = deduplicate_events(events)
     if not events:
         return {
             "medications": 0,

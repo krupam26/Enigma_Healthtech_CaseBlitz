@@ -8,6 +8,10 @@ from app.gemini_client import generate_content_with_retry
 from app.schemas import PrescriptionExtraction
 
 
+class PrescriptionExtractionError(RuntimeError):
+  """Raised when prescription extraction is unavailable or invalid."""
+
+
 EXTRACTION_PROMPT = """
 You are a prescription information extraction system.
 
@@ -85,12 +89,18 @@ Return ONLY valid JSON matching this structure:
 def extract_prescription(image_path: str) -> PrescriptionExtraction:
     image = Image.open(image_path)
 
-    response = generate_content_with_retry(
-    contents=[
-        EXTRACTION_PROMPT,
-        image
-    ]
-)
+    try:
+        response = generate_content_with_retry(
+            contents=[
+                EXTRACTION_PROMPT,
+                image
+            ]
+        )
+    except Exception as error:
+        raise PrescriptionExtractionError(
+            "We couldn't process this prescription right now. "
+            "Your existing medication information has not been changed."
+        ) from error
 
     raw_text = response.text.strip()
 
@@ -99,6 +109,25 @@ def extract_prescription(image_path: str) -> PrescriptionExtraction:
         raw_text = raw_text.replace("```", "")
         raw_text = raw_text.strip()
 
-    data = json.loads(raw_text)
+    try:
+        data = json.loads(raw_text)
+        extraction = PrescriptionExtraction.model_validate(data)
+    except (json.JSONDecodeError, TypeError, ValueError) as error:
+        raise PrescriptionExtractionError(
+            "The prescription response was not valid. "
+            "Please verify the prescription manually."
+        ) from error
 
-    return PrescriptionExtraction.model_validate(data)
+    for medication in extraction.medications:
+        required_fields = (
+            medication.name,
+            medication.strength,
+            medication.dose,
+            medication.frequency,
+            medication.timing,
+            medication.duration
+        )
+        if not all(required_fields) or medication.confidence < 0.75:
+            medication.requires_verification = True
+
+    return extraction

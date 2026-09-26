@@ -11,3 +11,4 @@ pytest
 pandas
 scikit-learn
 joblib
+opencv-python-headless

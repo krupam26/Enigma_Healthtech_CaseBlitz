@@ -1,6 +1,7 @@
 import os
 import shutil
 from tempfile import NamedTemporaryFile
+from typing import List
 from app.adherence import (
     predict_adherence_from_events,
     analyze_adherence,
@@ -9,9 +10,10 @@ from app.adherence import (
 )
 from fastapi import FastAPI, File, UploadFile, HTTPException
 
-from app.extraction import extract_prescription
-from app.normalization import normalize_prescription
+from app.extraction import extract_prescription, PrescriptionExtractionError
+from app.normalization import normalize_prescription, merge_prescriptions
 from app.safety import run_safety_checks
+from app.image_quality import prepare_image_for_extraction
 from app.adherence import analyze_adherence
 from app.chatbot import medication_chat
 from app.summary import generate_summary
@@ -39,10 +41,7 @@ def root():
     }
 
 
-@app.post("/ai/extract-prescription")
-async def extract_prescription_api(
-    file: UploadFile = File(...)
-):
+async def _extract_uploaded_file(file: UploadFile):
     allowed_types = {
         "image/jpeg",
         "image/png",
@@ -65,24 +64,55 @@ async def extract_prescription_api(
         temp_path = temp.name
 
     try:
-        extraction = extract_prescription(temp_path)
-
-        extraction = normalize_prescription(
-            extraction
-        )
-
-        safety_alerts = run_safety_checks(
-            extraction.medications
-        )
-
-        return {
-            "prescription": extraction.model_dump(),
-            "safety_alerts": safety_alerts
-        }
+        prepared_path, quality = prepare_image_for_extraction(temp_path)
+        if quality.quality_status == "UNRECOVERABLE":
+            raise HTTPException(status_code=422, detail=quality.as_dict())
+        try:
+            extraction = extract_prescription(prepared_path)
+        except PrescriptionExtractionError as error:
+            raise HTTPException(status_code=502, detail=str(error)) from error
+        extraction = normalize_prescription(extraction)
+        return extraction, quality
 
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
+        if "prepared_path" in locals() and prepared_path != temp_path:
+            if os.path.exists(prepared_path):
+                os.remove(prepared_path)
+
+
+@app.post("/ai/extract-prescription")
+async def extract_prescription_api(file: UploadFile = File(...)):
+    extraction, quality = await _extract_uploaded_file(file)
+    return {
+        "prescription": extraction.model_dump(),
+        "safety_alerts": run_safety_checks(extraction.medications),
+        "image_quality": quality.as_dict()
+    }
+
+
+@app.post("/ai/extract-prescriptions")
+async def extract_prescriptions_api(files: List[UploadFile] = File(...)):
+    if not files:
+        raise HTTPException(status_code=400, detail="At least one page is required.")
+    extractions = []
+    quality_reports = []
+    for file in files:
+        extraction, quality = await _extract_uploaded_file(file)
+        if quality.multiple_documents:
+            raise HTTPException(
+                status_code=422,
+                detail="Multiple documents detected. Please upload each prescription separately."
+            )
+        extractions.append(extraction)
+        quality_reports.append(quality.as_dict())
+    merged = normalize_prescription(merge_prescriptions(extractions))
+    return {
+        "prescription": merged.model_dump(),
+        "safety_alerts": run_safety_checks(merged.medications),
+        "image_quality": quality_reports
+    }
 
 
 @app.post("/ai/analyze-adherence")
@@ -164,5 +194,6 @@ async def prescription_adherence_events_api(
     return prescription_to_adherence_events(
         extraction,
         payload.start_date,
-        payload.days
+        payload.days,
+        payload.user_timezone
     )

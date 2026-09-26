@@ -1,11 +1,11 @@
 from datetime import date, datetime
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class Medication(BaseModel):
-    name: str
+    name: str = ""
     active_ingredient: Optional[str] = None
     strength: Optional[str] = None
     dose: Optional[float] = None
@@ -13,6 +13,8 @@ class Medication(BaseModel):
     frequency: Optional[str] = None
     timing: Optional[str] = None
     schedule_times: List[str] = Field(default_factory=list)
+    schedule_type: Literal["DAILY", "PRN"] = "DAILY"
+    schedule_phases: List[dict] = Field(default_factory=list)
     food_relation: Optional[str] = None
     duration: Optional[str] = None
     instructions: Optional[str] = None
@@ -35,6 +37,7 @@ class PrescriptionExtraction(BaseModel):
 
 class AdherenceEvent(BaseModel):
     patient_id: str | int
+    dose_id: Optional[str] = Field(default=None, min_length=1, max_length=200)
     medication: str = Field(min_length=1, max_length=200)
     scheduled_time: datetime
     period: Literal["morning", "afternoon", "evening"]
@@ -42,7 +45,11 @@ class AdherenceEvent(BaseModel):
         "taken",
         "taken_late",
         "missed_confirmed",
-        "not_recorded"
+        "not_recorded",
+        "skipped_by_user",
+        "unavailable",
+        "error_reported",
+        "cancelled"
     ]
     delay_hours: float = Field(default=0.0, ge=0.0, le=168.0)
     day_of_week: Optional[
@@ -53,6 +60,11 @@ class AdherenceEvent(BaseModel):
     ] = None
     reason: Optional[str] = Field(default=None, max_length=500)
 
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, value):
+        return str(value).strip().lower()
+
     @model_validator(mode="after")
     def validate_event_consistency(self):
         expected_day = self.scheduled_time.strftime("%A")
@@ -62,6 +74,12 @@ class AdherenceEvent(BaseModel):
             raise ValueError(
                 "delay_hours must be zero unless status is taken_late"
             )
+        if self.dose_id is None:
+            self.dose_id = "|".join([
+                str(self.patient_id),
+                self.medication.strip().lower(),
+                self.scheduled_time.isoformat()
+            ])
         return self
 
 
@@ -84,3 +102,4 @@ class PrescriptionAdherenceRequest(BaseModel):
     medications: List[Medication] = Field(min_length=1, max_length=100)
     start_date: date
     days: int = Field(default=1, ge=1, le=365)
+    user_timezone: str = Field(default="UTC", min_length=1, max_length=64)

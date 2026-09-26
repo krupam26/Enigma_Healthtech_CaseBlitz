@@ -56,6 +56,11 @@ def test_prescription_contract_generates_only_confirmed_doses():
             "medications": [
                 {
                     "name": "Metformin",
+                    "strength": "500mg",
+                    "dose": 1,
+                    "frequency": "twice daily",
+                    "timing": "after food",
+                    "duration": "ongoing",
                     "schedule_times": ["morning", "evening"]
                 },
                 {
