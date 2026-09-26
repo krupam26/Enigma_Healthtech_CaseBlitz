@@ -1,0 +1,38 @@
+{
+  "metformin": {
+    "canonical_name": "Metformin",
+    "active_ingredient": "Metformin"
+  },
+  "amlodipine": {
+    "canonical_name": "Amlodipine",
+    "active_ingredient": "Amlodipine"
+  },
+  "pantoprazole": {
+    "canonical_name": "Pantoprazole",
+    "active_ingredient": "Pantoprazole"
+  },
+  "paracetamol": {
+    "canonical_name": "Paracetamol",
+    "active_ingredient": "Paracetamol"
+  },
+  "acetaminophen": {
+    "canonical_name": "Paracetamol",
+    "active_ingredient": "Paracetamol"
+  },
+  "dextrose": {
+    "canonical_name": "Dextrose",
+    "active_ingredient": "Dextrose"
+  },
+  "5% dextrose": {
+    "canonical_name": "5% Dextrose",
+    "active_ingredient": "Dextrose"
+  },
+  "ors": {
+    "canonical_name": "ORS",
+    "active_ingredient": "Oral Rehydration Salts"
+  },
+  "oral rehydration salts": {
+    "canonical_name": "ORS",
+    "active_ingredient": "Oral Rehydration Salts"
+  }
+}
