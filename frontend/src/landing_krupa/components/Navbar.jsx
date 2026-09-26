@@ -53,17 +53,7 @@ export default function Navbar({ onOpenUpload, onOpenEmergency }) {
             <span>SOS</span>
           </button>
 
-          {/* Upload Rx CTA */}
-          <button 
-            type="button" 
-            className="nav-cta-btn"
-            onClick={onOpenUpload}
-          >
-            <UploadCloud size={14} />
-            <span>Upload Rx</span>
-          </button>
-
-          {/* Mobile menu hamburger */}
+        {/* Mobile menu hamburger */}
           <button 
             type="button" 
             className="mobile-hamburger"

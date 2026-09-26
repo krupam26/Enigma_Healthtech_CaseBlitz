@@ -58,7 +58,7 @@ export default function Footer({ onOpenUpload }) {
               <button 
                 type="button" 
                 className="footer-upload-btn"
-                onClick={onOpenUpload}
+                onClick={() => window.location.href = '/login'}
               >
                 Upload Prescription
               </button>

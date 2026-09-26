@@ -10,6 +10,7 @@ import ProfileSetup from './pages/ProfileSetup'
 import Dashboard from './pages/Dashboard'
 import Medications from './pages/Medications'
 import Schedule from './pages/Schedule'
+import UploadOnboarding from './pages/UploadOnboarding'
 
 import Adherence from './pages/Adherence'
 import Safety from './pages/Safety'
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
 
         {/* Authenticated app */}
+        <Route path="/upload-onboarding" element={<ProtectedRoute><UploadOnboarding /></ProtectedRoute>} />
         <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/medications" element={<ProtectedRoute><Medications /></ProtectedRoute>} />

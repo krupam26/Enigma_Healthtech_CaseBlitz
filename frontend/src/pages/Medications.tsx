@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import AppLayout from '../layouts/AppLayout'
 import { useStore } from '../services/store'
 import { MedicationCard } from '../components/MedicationRow'
@@ -9,6 +10,9 @@ import { speakText, stopSpeaking } from '../utils/speech'
 import type { Medication } from '../types'
 
 export default function Medications() {
+  const [searchParams] = useSearchParams()
+  const initialTab = (searchParams.get('tab') as 'meds' | 'prescription' | 'otc') || 'meds'
+
   const medications = useStore((s) => s.medications)
   const setMedications = useStore((s) => s.setMedications)
   const addMedication = useStore((s) => s.addMedication)
@@ -19,7 +23,7 @@ export default function Medications() {
   const show = useToast((s) => s.show)
 
   // Primary view tabs: Medications list vs Prescription OCR vs OTC Sudden Illness
-  const [hubTab, setHubTab] = useState<'meds' | 'prescription' | 'otc'>('meds')
+  const [hubTab, setHubTab] = useState<'meds' | 'prescription' | 'otc'>(initialTab)
   const [statusFilter, setStatusFilter] = useState<'Active' | 'Paused' | 'Discontinued' | 'All'>('Active')
   const [formMode, setFormMode] = useState<'none' | 'add' | string>('none')
   const [caregiverNotificationMsg, setCaregiverNotificationMsg] = useState<string | null>(null)

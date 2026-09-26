@@ -31,7 +31,11 @@ export default function Login() {
     // HARDCODED BYPASS: No API calls to prevent breaking!
     setTimeout(() => {
       login({ email: demoEmail, role })
-      navigate('/dashboard')
+      if (role === 'CAREGIVER') {
+        navigate('/caregiver-dashboard')
+      } else {
+        navigate('/upload-onboarding')
+      }
       setLoading(false)
     }, 400)
   }

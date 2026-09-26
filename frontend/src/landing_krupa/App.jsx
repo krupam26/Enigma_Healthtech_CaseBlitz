@@ -77,18 +77,6 @@ export default function App() {
       {/* Footer & Technical Architecture */}
       <Footer onOpenUpload={() => setUploadModalOpen(true)} />
 
-
-      {/* Floating Instant Rx Scan Button (Bottom-Right) */}
-      <button 
-        type="button" 
-        className="floating-rx-fab"
-        onClick={() => setUploadModalOpen(true)}
-        title="Upload or scan new prescription"
-      >
-        <UploadCloud size={16} />
-        <span>Scan Rx</span>
-      </button>
-
       {/* Ingestion & OCR Modal */}
       <UploadModal 
         isOpen={uploadModalOpen} 

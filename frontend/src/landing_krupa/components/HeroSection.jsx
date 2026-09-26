@@ -1,7 +1,6 @@
 import React from 'react';
 import { ChevronRight, Shield, Cpu, Activity, Sparkles } from 'lucide-react';
-
-
+import PillCanvas from './PillCanvas';
 export default function HeroSection({ onOpenUpload, onScrollToSection }) {
   return (
     <section className="hero-showcase" id="overview">
@@ -79,7 +78,7 @@ export default function HeroSection({ onOpenUpload, onScrollToSection }) {
               <span>INTERACTIVE 3D FORMULATION LAB</span>
             </div>
             <div className="hero-canvas-wrapper">
-              {/* 3D Pill Canvas Disabled to prevent WebGL hang */}
+              <PillCanvas isInteractive={true} />
             </div>
             <div className="canvas-caption">
               Drag to rotate 360° · Use toolbar to inspect inner formulation

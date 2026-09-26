@@ -3,6 +3,7 @@ import AppLayout from '../layouts/AppLayout'
 import { useStore } from '../services/store'
 import { useT } from '../hooks/useT'
 import { TimelineRow } from '../components/MedicationRow'
+import ReminderModal from '../components/ReminderModal'
 import { useToast } from '../components/Toast'
 import { api, type MissedDoseAdvice, type CaregiverFeedResponse } from '../services/api'
 import { speakReminder } from '../utils/speech'
@@ -11,6 +12,7 @@ import type { DoseStatus } from '../types'
 import { useNavigate, Navigate } from 'react-router-dom'
 
 export default function Dashboard() {
+  const [showReminder, setShowReminder] = useState(false)
   const t = useT()
   const lang = useStore((s) => s.lang)
   const user = useStore((s) => s.user)
@@ -117,13 +119,23 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-          <button
-            type="button"
-            className="bg-white text-teal-950 font-bold px-5 py-3 rounded-xl hover:bg-teal-50 transition-all flex items-center justify-center gap-2.5 text-base shadow hover:scale-[1.02] active:scale-[0.98] shrink-0"
-            onClick={announceAllDoses}
-          >
-            🔊 {t('dashboard.listenHindi')}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+            <button
+              type="button"
+              className="bg-teal-700/50 text-teal-100 font-bold px-4 py-2 rounded-xl hover:bg-teal-700 transition-all flex items-center justify-center text-sm shadow border border-teal-600"
+              onClick={() => setShowReminder(true)}
+              disabled={!next}
+            >
+              🔔 Show Visual Reminder
+            </button>
+            <button
+              type="button"
+              className="bg-white text-teal-950 font-bold px-5 py-3 rounded-xl hover:bg-teal-50 transition-all flex items-center justify-center gap-2.5 text-base shadow hover:scale-[1.02] active:scale-[0.98]"
+              onClick={announceAllDoses}
+            >
+              🔊 {t('dashboard.listenHindi')}
+            </button>
+          </div>
         </div>
 
         {/* 2. Key Metrics Cards (Properly spaced 3 columns) */}
@@ -280,6 +292,18 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+      {next && (
+        <ReminderModal 
+          isOpen={showReminder}
+          onClose={() => setShowReminder(false)}
+          medName={medById(next.medId).name}
+          dose={medById(next.medId).dose}
+          time={next.time}
+          foodRelation={medById(next.medId).food}
+          lang={lang}
+          onTakeDose={() => markDose(next.id, 'Taken')}
+        />
       )}
     </AppLayout>
   )
