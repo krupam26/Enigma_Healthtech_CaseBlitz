@@ -68,7 +68,17 @@ async def _extract_uploaded_file(file: UploadFile):
     try:
         prepared_path, quality = prepare_image_for_extraction(temp_path)
         if quality.quality_status == "UNRECOVERABLE":
-            raise HTTPException(status_code=422, detail=quality.as_dict())
+            detail = quality.as_dict()
+            detail.update({
+                "manual_entry_required": True,
+                "manual_entry_endpoint": "/ai/manual-medication",
+                "message": (
+                    "Please upload the image again. If the image is clear "
+                    "but extraction still fails, enter the medication name "
+                    "manually and verify the remaining instructions."
+                )
+            })
+            raise HTTPException(status_code=422, detail=detail)
         try:
             extraction = extract_prescription(prepared_path)
         except PrescriptionExtractionError as error:
@@ -78,9 +88,10 @@ async def _extract_uploaded_file(file: UploadFile):
                     "error": "prescription_extraction_unavailable",
                     "manual_entry_required": True,
                     "message": (
-                        "We couldn't read the prescription. Please enter "
-                        "the medication name manually and verify the "
-                        "remaining instructions."
+                        "Please upload the image again. If the image is "
+                        "clear but extraction still fails, enter the "
+                        "medication name manually and verify the remaining "
+                        "instructions."
                     ),
                     "manual_entry_endpoint": "/ai/manual-medication"
                 }

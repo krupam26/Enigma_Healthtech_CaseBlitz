@@ -121,9 +121,13 @@ def assess_image_quality(image_path: str) -> ImageQualityReport:
         status = "UNRECOVERABLE"
         message = (
             "Part of the prescription appears to be outside the image. "
-            "Please capture the complete prescription."
+            "Please upload the image again. If the image is clear but "
+            "extraction still fails, enter the medication name manually "
+            "and verify the remaining instructions."
             if cropped else
-            "The prescription image is not readable enough to process."
+            "Please upload the image again. If the image is clear but "
+            "extraction still fails, enter the medication name manually "
+            "and verify the remaining instructions."
         )
     elif recoverable and (
         blur_score < 120 or contrast < 35 or brightness < 55 or brightness > 205
