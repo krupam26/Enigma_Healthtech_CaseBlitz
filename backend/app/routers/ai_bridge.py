@@ -342,7 +342,6 @@ def get_structured_triage_guidance(scenario: str, drug_name: Optional[str] = Non
 # -------------------------------------------------------------
 
 @router.post("/chat")
-@router.post("/patient-qa")
 async def chat_assistant(
     payload: ChatQueryRequest,
     x_gemini_api_key: Optional[str] = Header(None),
@@ -706,14 +705,19 @@ async def parse_prescription_text(payload: PrescriptionTextParseRequest):
     )
 
 @router.post("/patient-qa")
-async def patient_chat_assistant(payload: ChatQueryRequest, x_user_id: Optional[str] = Header(None)):
+async def patient_chat_assistant(payload: ChatQueryRequest):
     """
     AI Patient Assistant endpoint using Groq API.
     """
     try:
         supabase = get_supabase()
-        meds_res = supabase.table("medications").select("name, dosage, frequency").eq("patient_id", x_user_id).eq("is_active", True).execute()
-        meds_context = ", ".join([f"{m['name']} {m.get('dosage','')} ({m.get('frequency','')})" for m in meds_res.data]) if meds_res.data else "No active medications."
+        meds_context = "No active medications."
+        try:
+            meds_res = supabase.table("medications").select("name, dosage, frequency").eq("patient_id", payload.patient_id).eq("is_active", True).execute()
+            if meds_res.data:
+                meds_context = ", ".join([f"{m['name']} {m.get('dosage','')} ({m.get('frequency','')})" for m in meds_res.data])
+        except Exception as db_err:
+            print(f"Supabase meds query error (ignoring): {db_err}")
         
         system_prompt = f"""You are a helpful and comforting AI health assistant for an elderly patient. 
 Your tone must be warm, reassuring, and very simple to understand. Avoid complex medical jargon.
@@ -727,7 +731,7 @@ If they ask about taking OTC drugs like ibuprofen or crocin, remind them to use 
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": payload.query}
             ],
-            model="llama3-8b-8192",
+            model="openai/gpt-oss-20b",
             temperature=0.3,
             max_tokens=150,
         )
@@ -735,8 +739,8 @@ If they ask about taking OTC drugs like ibuprofen or crocin, remind them to use 
         answer = chat_completion.choices[0].message.content
         return {"answer": answer, "suggested_actions": ["View Today's Schedule", "Run Safety Check"]}
     except Exception as e:
-        logger.error(f"Groq API Error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get answer from AI Assistant")
+        print(f"Groq API Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get answer from AI Assistant: {str(e)}")
 
 
     if "miss" in q or "forgot" in q:

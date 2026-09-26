@@ -1,5 +1,5 @@
-from app.config import settings
-from app.gemini_client import get_client
+import os
+from groq import Groq
 
 
 SUMMARY_PROMPT = """
@@ -27,9 +27,17 @@ DATA:
 {data}
 """
 
-    response = get_client().models.generate_content(
-        model=settings.gemini_model,
-        contents=prompt
+    groq_api_key = os.getenv("GROQ_API_KEY", "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")
+    client = Groq(api_key=groq_api_key)
+    
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {"role": "system", "content": SUMMARY_PROMPT},
+            {"role": "user", "content": f"DATA:\n{data}"}
+        ],
+        model="openai/gpt-oss-20b",
+        temperature=0.3,
+        max_tokens=300,
     )
 
-    return response.text
+    return chat_completion.choices[0].message.content
