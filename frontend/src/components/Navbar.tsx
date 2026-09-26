@@ -37,13 +37,19 @@ export default function Navbar() {
         <span>MedCheck</span>
       </div>
       
-      <div className="flex items-center gap-1.5 overflow-x-auto flex-1 justify-center px-4">
+      <div 
+        className="flex items-center gap-2 overflow-x-auto flex-1 justify-center px-2 sm:px-4" 
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        <style>{`
+          .flex::-webkit-scrollbar { display: none; }
+        `}</style>
         {ITEMS.map(([to, key]) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
-              `whitespace-nowrap px-4 py-2 rounded-full text-[14.5px] font-medium transition-all ${
+              `whitespace-nowrap px-3 py-1.5 rounded-full text-[13.5px] font-medium transition-all ${
                 isActive ? 'bg-mint-300 text-teal-950 shadow-sm' : 'text-white/80 hover:bg-white/[.1] hover:text-white'
               }`
             }

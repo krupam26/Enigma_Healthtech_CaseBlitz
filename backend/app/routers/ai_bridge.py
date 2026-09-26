@@ -706,7 +706,7 @@ async def parse_prescription_text(payload: PrescriptionTextParseRequest):
     )
 
 @router.post("/patient-qa")
-async def patient_chat_assistant(payload: ChatQueryRequest, x_user_id: str = Header(...)):
+async def patient_chat_assistant(payload: ChatQueryRequest, x_user_id: Optional[str] = Header(None)):
     """
     AI Patient Assistant endpoint using Groq API.
     """

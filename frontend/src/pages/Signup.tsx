@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../services/store'
-import Pill3D from '../components/Pill3D'
 import type { Lang } from '../types'
 import { signUp } from '../services/auth'
 
@@ -32,7 +31,6 @@ export default function Signup() {
   return (
     <div className="min-h-screen grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
       <div className="bg-gradient-to-br from-teal-950 to-teal-700 flex items-center justify-center">
-        <Pill3D progress={0} height={420} />
       </div>
       <div className="flex items-center justify-center p-10">
         <div className="w-full max-w-[400px]">
