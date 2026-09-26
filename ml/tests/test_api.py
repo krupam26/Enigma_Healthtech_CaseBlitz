@@ -98,3 +98,14 @@ def test_manual_medication_fallback_requires_verification():
     assert response.status_code == 200
     assert response.json()["medication"]["name"] == "Metformin"
     assert response.json()["medication"]["requires_verification"] is True
+
+
+def test_upload_openapi_fields_are_binary():
+    schema = client.get("/openapi.json").json()
+    components = schema["components"]["schemas"]
+    upload_schema = next(
+        schema for name, schema in components.items()
+        if name.startswith("Body_extract_prescriptions_api")
+    )
+
+    assert upload_schema["properties"]["files"]["items"]["format"] == "binary"

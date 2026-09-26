@@ -9,6 +9,7 @@ from app.adherence import (
     caregiver_support_action
 )
 from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.openapi.utils import get_openapi
 
 from app.extraction import extract_prescription, PrescriptionExtractionError
 from app.normalization import normalize_prescription, merge_prescriptions
@@ -34,6 +35,32 @@ app = FastAPI(
     description="AI and ML services for medication management",
     version="1.0.0"
 )
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes
+    )
+    for component in schema.get("components", {}).get("schemas", {}).values():
+        for property_schema in component.get("properties", {}).values():
+            if property_schema.get("contentMediaType") == "application/octet-stream":
+                property_schema.pop("contentMediaType", None)
+                property_schema["format"] = "binary"
+            items = property_schema.get("items", {})
+            if items.get("contentMediaType") == "application/octet-stream":
+                items.pop("contentMediaType", None)
+                items["format"] = "binary"
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 
 @app.get("/")
