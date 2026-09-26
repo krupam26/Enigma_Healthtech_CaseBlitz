@@ -227,6 +227,29 @@ def predict_adherence_from_events(events):
         "features": features,
         "prediction": prediction
     }
+
+
+def caregiver_support_action(support_risk):
+    actions = {
+        "high": {
+            "action": "escalation_recommendation",
+            "backend_next_step": (
+                "Check caregiver consent before sending a notification."
+            ),
+            "notify_caregiver": True
+        },
+        "medium": {
+            "action": "supportive_follow_up",
+            "backend_next_step": "Offer reminders or supportive follow-up.",
+            "notify_caregiver": False
+        },
+        "low": {
+            "action": "routine_tracking",
+            "backend_next_step": "Continue routine adherence tracking.",
+            "notify_caregiver": False
+        }
+    }
+    return actions.get(support_risk, actions["medium"])
 def calculate_adherence(events):
     observed_events = [
         event
