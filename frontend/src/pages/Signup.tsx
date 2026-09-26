@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../services/store'
 import Pill3D from '../components/Pill3D'
 import type { Lang } from '../types'
+import { signUp } from '../services/auth'
 
 export default function Signup() {
   const signup = useStore((s) => s.signup)
@@ -12,13 +13,20 @@ export default function Signup() {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [lang, setLang] = useState<Lang>('en')
+  const [role, setRole] = useState<'PATIENT' | 'CAREGIVER'>('PATIENT')
   const [error, setError] = useState('')
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (password !== confirm) { setError('Passwords do not match'); return }
-    signup(name, email, lang)
-    navigate('/profile-setup')
+    try {
+      const session = await signUp(name, email, password, role)
+      signup(name, email, lang)
+      setError(session ? '' : 'Account created. Confirm your email before signing in.')
+      navigate(session ? '/profile-setup' : '/login')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to create account.')
+    }
   }
 
   return (
@@ -36,6 +44,13 @@ export default function Signup() {
             <div className="field mt-5"><label className="block text-[13px] font-semibold text-inksoft mb-[7px]">Email</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div className="field mt-5"><label className="block text-[13px] font-semibold text-inksoft mb-[7px]">Password</label><input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
             <div className="field mt-5"><label className="block text-[13px] font-semibold text-inksoft mb-[7px]">Confirm password</label><input type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} /></div>
+            <div className="field mt-5">
+              <label className="block text-[13px] font-semibold text-inksoft mb-[7px]">Account type</label>
+              <select value={role} onChange={(e) => setRole(e.target.value as 'PATIENT' | 'CAREGIVER')}>
+                <option value="PATIENT">Patient</option>
+                <option value="CAREGIVER">Caregiver</option>
+              </select>
+            </div>
             <div className="field mt-5">
               <label className="block text-[13px] font-semibold text-inksoft mb-[7px]">Preferred language</label>
               <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>

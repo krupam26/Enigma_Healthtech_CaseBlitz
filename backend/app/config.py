@@ -1,10 +1,13 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    # Load .env file from backend root
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    load_dotenv(dotenv_path=env_path)
+except ImportError:
+    pass
 
-# Load .env file from backend root
-env_path = Path(__file__).resolve().parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
 
 class Settings:
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
@@ -13,6 +16,8 @@ class Settings:
     PORT: int = int(os.getenv("PORT", 8000))
     HOST: str = os.getenv("HOST", "0.0.0.0")
     ML_SERVICE_URL: str = os.getenv("ML_SERVICE_URL", "http://localhost:8001")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
     @property
     def is_supabase_configured(self) -> bool:
@@ -23,3 +28,4 @@ class Settings:
         )
 
 settings = Settings()
+

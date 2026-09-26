@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../services/store'
+import { signIn } from '../services/auth'
 import Pill3D from '../components/Pill3D'
 
 export default function Login() {
@@ -10,18 +11,20 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [touched, setTouched] = useState(false)
+  const [error, setError] = useState('')
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     setTouched(true)
     if (!email || !password) return
-    login(email)
-    navigate(profileComplete ? '/dashboard' : '/profile-setup')
-  }
-
-  const quickLogin = () => {
-    login()
-    navigate(profileComplete ? '/dashboard' : '/profile-setup')
+    try {
+      const session = await signIn(email, password)
+      if (!session) throw new Error('Check your email to confirm your account before signing in.')
+      login(email)
+      navigate(profileComplete ? '/dashboard' : '/profile-setup')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to sign in.')
+    }
   }
 
   return (
@@ -50,14 +53,9 @@ export default function Login() {
             </div>
             <button className="btn-primary w-full mt-6" type="submit">Log in</button>
           </form>
-          <button className="w-full mt-3 border-[1.5px] border-line py-[13px] rounded-[11px] font-semibold text-[14.5px]" onClick={quickLogin}>
-            Continue with Google (demo)
-          </button>
+          {error && <div className="text-[12.5px] text-risk mt-3">{error}</div>}
           <div className="mt-[22px] text-center text-[14px] text-inksoft">
             New to MedCheck? <Link to="/signup" className="text-teal-700 font-semibold">Create account</Link>
-          </div>
-          <div className="mt-1 text-center text-[14px] text-inksoft">
-            Demo account: <b>ramesh@medcheck.demo</b> / any password
           </div>
         </div>
       </div>
