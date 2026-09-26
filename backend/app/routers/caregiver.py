@@ -3,6 +3,7 @@ from typing import Optional
 from app.schemas.caregiver import PatientAdherenceOverview, CaregiverAlertItem
 from app.schemas.user import CaregiverConsentUpdate
 from app.routers.medications import _in_memory_meds
+from app.services.notifications import in_memory_caregiver_alerts, push_caregiver_alert
 
 router = APIRouter(prefix="/api/caregiver", tags=["Caregiver Coordination"])
 
@@ -14,16 +15,6 @@ _caregiver_state = {
     "share_med_details": False, # Privacy consent default is FALSE as noted in demo plan
     "consecutive_misses": 2,
     "adherence_pct": 66.7,
-    "alerts": [
-        {
-            "id": "alert-101",
-            "patient_id": "demo-patient-ramesh",
-            "alert_type": "CONSECUTIVE_MISSED_DOSE",
-            "message": "URGENT: Ramesh Sharma has missed 2 consecutive scheduled doses (Metformin evening doses).",
-            "is_resolved": False,
-            "created_at": "Today at 21:15"
-        }
-    ]
 }
 
 @router.get("/patient-status", response_model=PatientAdherenceOverview)
@@ -42,7 +33,7 @@ async def get_patient_status_for_caregiver(
     if is_shared:
         meds_display = [f"{m['name']} ({m['dosage']})" for m in _in_memory_meds if m["is_active"]]
 
-    alerts_list = [CaregiverAlertItem(**a) for a in _caregiver_state["alerts"]]
+    alerts_list = [CaregiverAlertItem(**a) for a in in_memory_caregiver_alerts]
 
     return PatientAdherenceOverview(
         patient_id=_caregiver_state["patient_id"],

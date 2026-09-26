@@ -13,10 +13,12 @@ interface Store extends AppState {
   saveProfile: (patch: Partial<UserProfile>) => void
   completeProfile: () => void
   markDose: (eventId: string, status: DoseStatus) => void
+  setMedications: (meds: Medication[]) => void
   addMedication: (med: Omit<Medication, 'id'>) => void
   updateMedication: (id: string, patch: Partial<Medication>) => void
-  pauseMedication: (id: string) => void
-  discontinueMedication: (id: string) => void
+  pauseMedication: (id: string, reason?: string) => void
+  discontinueMedication: (id: string, reason?: string) => void
+  removeMedication: (id: string) => void
   addCaregiver: (name: string, relation: string) => void
   toggleCaregiverPerm: (id: string, perm: keyof CaregiverPerms) => void
   revokeCaregiver: (id: string) => void
@@ -61,6 +63,11 @@ export const useStore = create<Store>((set, get) => ({
     persist(get)
   },
 
+  setMedications: (meds) => {
+    set({ medications: meds })
+    persist(get)
+  },
+
   addMedication: (med) => {
     const id = 'm' + Date.now()
     set((s) => ({ medications: [...s.medications, { ...med, id }] }))
@@ -72,17 +79,32 @@ export const useStore = create<Store>((set, get) => ({
     persist(get)
   },
 
-  pauseMedication: (id) => {
+  pauseMedication: (id, reason) => {
     set((s) => ({
       medications: s.medications.map((m) =>
-        m.id === id ? { ...m, status: m.status === 'Active' ? 'Paused' : 'Active' } : m
+        m.id === id
+          ? {
+              ...m,
+              status: m.status === 'Active' ? 'Paused' : 'Active',
+              pauseReason: reason || m.pauseReason,
+            }
+          : m
       ),
     }))
     persist(get)
   },
 
-  discontinueMedication: (id) => {
-    set((s) => ({ medications: s.medications.map((m) => (m.id === id ? { ...m, status: 'Discontinued' } : m)) }))
+  discontinueMedication: (id, reason) => {
+    set((s) => ({
+      medications: s.medications.map((m) =>
+        m.id === id ? { ...m, status: 'Discontinued', discontinueReason: reason || m.discontinueReason } : m
+      ),
+    }))
+    persist(get)
+  },
+
+  removeMedication: (id) => {
+    set((s) => ({ medications: s.medications.filter((m) => m.id !== id) }))
     persist(get)
   },
 

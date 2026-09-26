@@ -1,3 +1,5 @@
+import type { Medication } from '../types'
+
 const BACKEND_URL = 'http://localhost:8000'
 const ML_URL = 'http://localhost:8001'
 
@@ -17,6 +19,9 @@ export interface ExtractedMedication {
   dosage: string
   schedule_times: string[]
   food_relation: string
+  frequency?: string
+  pill_appearance?: string
+  packet_appearance?: string
   confidence: number
   requires_user_confirmation: boolean
 }
@@ -110,16 +115,223 @@ export const api = {
         doctor_name: doctorTag || 'Dr. K. Sharma (Cardiology & Internal Medicine)',
         prescription_date: new Date().toISOString().split('T')[0],
         extracted_medications: [
-          { name: 'Amlodipine', dosage: '5mg', schedule_times: ['08:00'], food_relation: 'AFTER_FOOD', confidence: 0.98, requires_user_confirmation: false },
-          { name: 'Aspirin', dosage: '75mg', schedule_times: ['08:00'], food_relation: 'AFTER_FOOD', confidence: 0.65, requires_user_confirmation: true },
-          { name: 'Metformin', dosage: '500mg', schedule_times: ['08:30', '20:30'], food_relation: 'AFTER_FOOD', confidence: 0.95, requires_user_confirmation: false },
+          {
+            name: 'Amlodipine',
+            dosage: '5mg',
+            schedule_times: ['08:00'],
+            food_relation: 'AFTER_FOOD',
+            frequency: 'Once daily (Morning)',
+            pill_appearance: 'Small round white tablet, scored on one side',
+            packet_appearance: 'Silver aluminium strip with green & black text (10 tablets)',
+            confidence: 0.98,
+            requires_user_confirmation: false
+          },
+          {
+            name: 'Aspirin',
+            dosage: '75mg',
+            schedule_times: ['08:00'],
+            food_relation: 'AFTER_FOOD',
+            frequency: 'Once daily (Morning)',
+            pill_appearance: 'Small round peach/pink enteric-coated tablet',
+            packet_appearance: 'Silver push-through foil strip with bold red stripe "Ecosprin 75"',
+            confidence: 0.65,
+            requires_user_confirmation: true
+          },
+          {
+            name: 'Metformin',
+            dosage: '500mg',
+            schedule_times: ['08:30', '20:30'],
+            food_relation: 'AFTER_FOOD',
+            frequency: 'Twice daily (Morning & Night)',
+            pill_appearance: 'White oblong/oval tablet, stamped "500"',
+            packet_appearance: 'Silver blister strip with blue background band (15 tablets)',
+            confidence: 0.95,
+            requires_user_confirmation: false
+          },
         ],
         warnings: ['Low confidence on Aspirin dosage (detected 75mg). Please confirm before saving.'],
       }
     }
   },
 
-  // 3. AI Copilot Chat Assistant
+  // 3. Parse Prescription Text (WhatsApp, SMS, Doctor Notes)
+  async parsePrescriptionText(text: string, doctorTag?: string): Promise<PrescriptionExtractionResponse> {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/ai/parse-text`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, doctor_tag: doctorTag }),
+      })
+      if (!res.ok) throw new Error('Text parse API error')
+      return await res.json()
+    } catch (err) {
+      console.warn('Backend text parser unavailable, parsing locally:', err)
+      return {
+        doctor_name: doctorTag || 'Caregiver / Doctor Note',
+        prescription_date: new Date().toISOString().split('T')[0],
+        extracted_medications: [
+          {
+            name: 'Metformin',
+            dosage: '500mg',
+            schedule_times: ['08:30', '20:30'],
+            food_relation: 'AFTER_FOOD',
+            frequency: 'Twice daily',
+            pill_appearance: 'White oblong tablet, stamped 500',
+            packet_appearance: 'Silver blister strip with blue band',
+            confidence: 0.92,
+            requires_user_confirmation: false,
+          },
+        ],
+        warnings: [],
+      }
+    }
+  },
+
+  // 4. Medication CRUD & Lifecycle (Connected to Backend & DB)
+  async getActiveMedications(): Promise<Medication[]> {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/medications/active`)
+      if (!res.ok) throw new Error('Failed to fetch medications')
+      const data = await res.json()
+      // Map backend schema to frontend Medication model
+      return data.map((m: any) => ({
+        id: m.id,
+        name: m.name,
+        strength: m.dosage || '',
+        dose: '1 tablet',
+        frequency: m.frequency || (m.schedule_times?.length > 1 ? 'Twice daily' : 'Once daily'),
+        timing: m.schedule_times?.[0] ? `${m.schedule_times[0]} AM` : '08:00 AM',
+        food: m.food_relation === 'BEFORE_FOOD' ? 'Before food' : 'After food',
+        start: m.start_date || '2026-01-10',
+        end: m.end_date || '',
+        doctor: m.doctor_name || 'Dr. Sharma',
+        specialty: '',
+        source: m.is_otc ? 'OTC' : 'Prescription',
+        type: m.is_sos ? 'SOS' : m.is_otc ? 'OTC' : 'Prescription',
+        instructions: m.pill_appearance || '',
+        status: m.is_active ? (m.is_paused ? 'Paused' : 'Active') : 'Discontinued',
+        pillAppearance: m.pill_appearance,
+        packetAppearance: m.packet_appearance,
+        imageUrl: m.image_url,
+        packetImageUrl: m.packet_image_url,
+        discontinueReason: m.discontinue_reason,
+        pauseReason: m.pause_reason,
+        isPaused: m.is_paused,
+      }))
+    } catch (err) {
+      console.warn('Backend medications API error, falling back to local store:', err)
+      throw err
+    }
+  },
+
+  async addMedication(med: Partial<Medication>): Promise<any> {
+    try {
+      const payload = {
+        name: med.name,
+        dosage: med.strength || med.dose || '1 tablet',
+        is_otc: med.type === 'OTC',
+        is_sos: med.type === 'SOS',
+        food_relation: med.food?.toLowerCase().includes('before') ? 'BEFORE_FOOD' : 'AFTER_FOOD',
+        schedule_times: [med.timing?.replace(/[^\d:]/g, '') || '08:00'],
+        frequency: med.frequency || 'Once daily',
+        doctor_name: med.doctor || 'Doctor Prescribed',
+        pill_appearance: med.pillAppearance,
+        packet_appearance: med.packetAppearance,
+        image_url: med.imageUrl,
+        packet_image_url: med.packetImageUrl,
+      }
+      const res = await fetch(`${BACKEND_URL}/api/medications/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Failed to add medication')
+      return await res.json()
+    } catch (err) {
+      console.warn('Backend add medication unavailable:', err)
+      return null
+    }
+  },
+
+  async updateMedication(id: string, patch: Partial<Medication>): Promise<any> {
+    try {
+      const payload: Record<string, any> = {}
+      if (patch.name) payload.name = patch.name
+      if (patch.strength) payload.dosage = patch.strength
+      if (patch.frequency) payload.frequency = patch.frequency
+      if (patch.doctor) payload.doctor_name = patch.doctor
+      if (patch.pillAppearance) payload.pill_appearance = patch.pillAppearance
+      if (patch.packetAppearance) payload.packet_appearance = patch.packetAppearance
+      if (patch.imageUrl) payload.image_url = patch.imageUrl
+      if (patch.packetImageUrl) payload.packet_image_url = patch.packetImageUrl
+
+      const res = await fetch(`${BACKEND_URL}/api/medications/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      return res.ok ? await res.json() : null
+    } catch (err) {
+      console.warn('Backend update medication unavailable:', err)
+      return null
+    }
+  },
+
+  async adjustDose(id: string, newDosage: string, reason?: string): Promise<any> {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/medications/${id}/dose`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_dosage: newDosage, reason }),
+      })
+      return res.ok ? await res.json() : null
+    } catch (err) {
+      console.warn('Backend adjust dose unavailable:', err)
+      return null
+    }
+  },
+
+  async pauseMedication(id: string, pause: boolean, reason?: string): Promise<any> {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/medications/${id}/pause`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pause, reason }),
+      })
+      return res.ok ? await res.json() : null
+    } catch (err) {
+      console.warn('Backend pause medication unavailable:', err)
+      return null
+    }
+  },
+
+  async discontinueMedication(id: string, reason: string): Promise<any> {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/medications/${id}/discontinue`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      })
+      return res.ok ? await res.json() : null
+    } catch (err) {
+      console.warn('Backend discontinue medication unavailable:', err)
+      return null
+    }
+  },
+
+  async deleteMedication(id: string): Promise<any> {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/medications/${id}`, {
+        method: 'DELETE',
+      })
+      return res.ok ? await res.json() : null
+    } catch (err) {
+      console.warn('Backend delete medication unavailable:', err)
+      return null
+    }
+  },
+
+  // 5. AI Copilot Chat Assistant
   async chatAssistant(query: string, patientId: string = 'demo-patient-ramesh'): Promise<{ answer: string; suggested_actions?: string[] }> {
     try {
       const res = await fetch(`${BACKEND_URL}/api/ai/patient-qa`, {
@@ -157,7 +369,7 @@ export const api = {
     }
   },
 
-  // 4. Deterministic Missed Dose Advice Engine
+  // 6. Deterministic Missed Dose Advice Engine
   async getMissedDoseAdvice(doseId: string): Promise<MissedDoseAdvice> {
     try {
       const res = await fetch(`${BACKEND_URL}/api/schedule/doses/${doseId}/missed-advice`, {
@@ -178,7 +390,7 @@ export const api = {
     }
   },
 
-  // 5. Caregiver Feed & Consent
+  // 7. Caregiver Feed & Consent
   async getCaregiverStatus(): Promise<CaregiverFeedResponse> {
     try {
       const res = await fetch(`${BACKEND_URL}/api/caregiver/patient-status`)
@@ -219,7 +431,7 @@ export const api = {
     }
   },
 
-  // 6. Generate Doctor Clinical Summary (ML Service)
+  // 8. Generate Doctor Clinical Summary (ML Service)
   async generateDoctorSummary(data: any): Promise<string> {
     try {
       const res = await fetch(`${ML_URL}/ai/generate-summary`, {

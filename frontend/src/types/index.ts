@@ -19,6 +19,13 @@ export interface Medication {
   type: MedType
   instructions: string
   status: MedStatus
+  pillAppearance?: string
+  packetAppearance?: string
+  imageUrl?: string
+  packetImageUrl?: string
+  discontinueReason?: string
+  pauseReason?: string
+  isPaused?: boolean
 }
 
 export type DoseStatus = 'Taken' | 'Missed' | 'Upcoming' | 'Late' | 'Not Recorded'
