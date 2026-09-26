@@ -35,11 +35,31 @@ async def parse_prescription_image(
     for Ramesh's cardiology prescription.
     """
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            files = {"file": (file.filename, await file.read(), file.content_type)}
-            response = await client.post(f"{settings.ML_SERVICE_URL}/extract", files=files)
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            files = {"file": (file.filename, await file.read(), file.content_type or "image/jpeg")}
+            response = await client.post(f"{settings.ML_SERVICE_URL}/ai/extract-prescription", files=files)
             if response.status_code == 200:
-                return response.json()
+                ml_data = response.json()
+                # Map ML extraction response to backend schema
+                prescription = ml_data.get("prescription", {})
+                meds = []
+                for m in prescription.get("medications", []):
+                    meds.append(
+                        MedicationExtractionItem(
+                            name=m.get("name", "Unknown"),
+                            dosage=f"{m.get('dose', '')}{m.get('unit', '')}".strip() or m.get("strength") or "As directed",
+                            schedule_times=[m.get("timing")] if m.get("timing") else ["08:00"],
+                            food_relation=m.get("food_relation") or "AFTER_FOOD",
+                            confidence=float(m.get("confidence", 0.8)),
+                            requires_user_confirmation=bool(m.get("requires_verification", False))
+                        )
+                    )
+                return PrescriptionParseResponse(
+                    doctor_name=prescription.get("doctor_name") or doctor_tag or "Extracted Doctor",
+                    prescription_date=prescription.get("prescription_date") or "2026-09-26",
+                    extracted_medications=meds,
+                    warnings=prescription.get("warnings", [])
+                )
     except Exception:
         # Fallback to curated demo extraction matching plan1.doc Ramesh demo flow
         pass
@@ -86,6 +106,20 @@ async def patient_chat_assistant(payload: ChatQueryRequest):
     """
     q = payload.query.lower()
     
+    # Try calling ML service chatbot first
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                f"{settings.ML_SERVICE_URL}/ai/chat",
+                json={"question": payload.query, "medication_context": "Patient Ramesh (67), on Amlodipine, Metformin, Aspirin."}
+            )
+            if resp.status_code == 200:
+                answer = resp.json().get("answer")
+                if answer:
+                    return {"answer": answer, "suggested_actions": ["Review Medication Plan", "Contact Caregiver"]}
+    except Exception:
+        pass
+
     if "miss" in q or "forgot" in q:
         return {
             "answer": "If you missed a dose, check your timeline card on the dashboard and tap 'Missed Dose Advice'. Our clinical calculator will tell you safely whether to take it now or wait for your next dose based on the elapsed time. Never take two pills at once!",
