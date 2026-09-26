@@ -330,3 +330,65 @@ def analyze_adherence(events):
         ),
         "patterns": patterns
     }
+def generate_support_message(features, support_risk):
+    messages = []
+
+    if features["missed_doses"] > 0:
+        messages.append(
+            f"{features['missed_doses']} confirmed dose(s) "
+            "were missed."
+        )
+
+    if features["evening_misses"] >= 2:
+        messages.append(
+            "Evening doses appear to be a recurring "
+            "adherence difficulty."
+        )
+
+    if features["weekend_misses"] >= 2:
+        messages.append(
+            "Weekend doses appear to be missed more "
+            "frequently."
+        )
+
+    if features["consecutive_missed_max"] >= 3:
+        messages.append(
+            "There is a consecutive missed-dose pattern "
+            "that may need attention."
+        )
+
+    if features["average_delay_hours"] >= 2:
+        messages.append(
+            "Some doses are being recorded considerably "
+            "later than scheduled."
+        )
+
+    if not messages:
+        messages.append(
+            "No significant missed-dose pattern was "
+            "detected in the recorded history."
+        )
+
+    if support_risk == "high":
+        action = (
+            "Consider sending an adherence reminder "
+            "and, according to the user's configured "
+            "care plan, notifying a trusted caregiver."
+        )
+
+    elif support_risk == "medium":
+        action = (
+            "Consider additional reminders or "
+            "supportive follow-up."
+        )
+
+    else:
+        action = (
+            "Continue routine adherence tracking "
+            "and reminders."
+        )
+
+    return {
+        "observations": messages,
+        "suggested_action": action
+    }
