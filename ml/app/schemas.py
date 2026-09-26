@@ -42,6 +42,7 @@ class AdherenceEvent(BaseModel):
     scheduled_time: datetime
     period: Literal["morning", "afternoon", "evening"]
     status: Literal[
+        "scheduled",
         "taken",
         "taken_late",
         "missed_confirmed",

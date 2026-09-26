@@ -152,6 +152,23 @@ def enhance_image(image_path: str) -> str:
         raise ValueError("The uploaded image could not be read.")
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    contours = _document_contours(gray)
+    if contours:
+        rectangle = cv2.minAreaRect(contours[0])
+        angle = rectangle[2]
+        if rectangle[1][0] < rectangle[1][1]:
+            angle += 90
+        if abs(angle) > 1:
+            height, width = image.shape[:2]
+            center = (width / 2, height / 2)
+            rotation = cv2.getRotationMatrix2D(center, angle, 1.0)
+            image = cv2.warpAffine(
+                image,
+                rotation,
+                (width, height),
+                borderMode=cv2.BORDER_REPLICATE
+            )
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     denoised = cv2.medianBlur(gray, 3)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     enhanced = clahe.apply(denoised)
