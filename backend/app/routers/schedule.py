@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Header
 from typing import Optional, List, Dict
 from datetime import datetime, timezone
 import uuid
+import logging
 from app.db import get_supabase
 from app.schemas.schedule import (
     TodayScheduleResponse,
@@ -12,39 +13,18 @@ from app.schemas.schedule import (
 )
 from app.services.decision_tree import evaluate_missed_dose_decision
 from app.services.escalation import check_and_escalate_missed_dose
-from app.routers.medications import _in_memory_meds
 
 router = APIRouter(prefix="/api/schedule", tags=["Schedule & Adherence"])
+logger = logging.getLogger("uvicorn")
 
-# Tracks user interaction / logs for doses today (TAKEN, MISSED, notes)
-now_utc = datetime.now(timezone.utc)
-_dose_record_cache: Dict[str, dict] = {
-    "dose-med-1-0800": {
-        "status": DoseStatusEnum.TAKEN,
-        "taken_at": now_utc.replace(hour=8, minute=15, second=0),
-        "notes": "Taken with breakfast"
-    },
-    "dose-med-3-0800": {
-        "status": DoseStatusEnum.TAKEN,
-        "taken_at": now_utc.replace(hour=8, minute=15, second=0),
-        "notes": "Taken with water"
-    },
-    "dose-med-2-2030": {
-        "status": DoseStatusEnum.MISSED,
-        "taken_at": None,
-        "notes": "Patient fell asleep early"
-    }
-}
-
-def generate_dynamic_today_doses(medications: List[dict]) -> List[DoseLogItem]:
-    """
-    Dynamically generates today's dose log items based on the active medications.
-    """
+def generate_dynamic_today_doses(medications: List[dict], dose_logs: List[dict]) -> List[DoseLogItem]:
     today_dt = datetime.now(timezone.utc)
     doses: List[DoseLogItem] = []
 
+    # create a lookup for dose logs by dose_id
+    log_map = {log["dose_id"]: log for log in dose_logs}
+
     for med in medications:
-        # Skip paused or discontinued medications
         if not med.get("is_active", True) or med.get("is_paused", False):
             continue
 
@@ -57,7 +37,6 @@ def generate_dynamic_today_doses(medications: List[dict]) -> List[DoseLogItem]:
         is_sos = med.get("is_sos", False)
 
         for t in sched_times:
-            # Parse hour and minute from string e.g. "08:00" or "08:30:00"
             parts = t.split(":")
             hour = int(parts[0]) if len(parts) > 0 and parts[0].isdigit() else 8
             minute = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
@@ -66,10 +45,11 @@ def generate_dynamic_today_doses(medications: List[dict]) -> List[DoseLogItem]:
             clean_time_id = f"{hour:02d}{minute:02d}"
             dose_id = f"dose-{med_id}-{clean_time_id}"
 
-            # Check cached status or fallback to SCHEDULED
-            cache_entry = _dose_record_cache.get(dose_id, {})
-            status = cache_entry.get("status", DoseStatusEnum.SCHEDULED)
-            taken_at = cache_entry.get("taken_at", None)
+            cache_entry = log_map.get(dose_id, {})
+            status_str = cache_entry.get("status", "SCHEDULED")
+            status = DoseStatusEnum(status_str) if status_str else DoseStatusEnum.SCHEDULED
+            taken_at_str = cache_entry.get("taken_at")
+            taken_at = datetime.fromisoformat(taken_at_str) if taken_at_str else None
             notes = cache_entry.get("notes", None)
 
             doses.append(
@@ -91,27 +71,33 @@ def generate_dynamic_today_doses(medications: List[dict]) -> List[DoseLogItem]:
     return doses
 
 @router.get("/today", response_model=TodayScheduleResponse)
-async def get_today_schedule(x_user_id: Optional[str] = Header("demo-patient-ramesh")):
-    """
-    Returns today's medication schedule dynamically generated from active medications.
-    Categorized into Morning, Afternoon, Evening, Night, and SOS.
-    """
-    # Fetch active medications from Supabase or fallback to in-memory
-    active_meds = _in_memory_meds
+async def get_today_schedule(x_user_id: str = Header(...)):
+    active_meds = []
+    dose_logs = []
     try:
         supabase = get_supabase()
-        res = supabase.table("medications")\
+        res_meds = supabase.table("medications")\
             .select("*")\
             .eq("patient_id", x_user_id)\
             .eq("is_active", True)\
             .eq("is_paused", False)\
             .execute()
-        if res.data:
-            active_meds = res.data
-    except Exception:
-        pass
+        if res_meds.data:
+            active_meds = res_meds.data
+        
+        today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        res_logs = supabase.table("dose_logs")\
+            .select("*")\
+            .eq("patient_id", x_user_id)\
+            .eq("scheduled_date", today_str)\
+            .execute()
+        if res_logs.data:
+            dose_logs = res_logs.data
+    except Exception as e:
+        logger.error(f"Error fetching schedule: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
 
-    all_doses = generate_dynamic_today_doses(active_meds)
+    all_doses = generate_dynamic_today_doses(active_meds, dose_logs)
     today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     morning, afternoon, evening, night, sos_list = [], [], [], [], []
@@ -144,22 +130,37 @@ async def get_today_schedule(x_user_id: Optional[str] = Header("demo-patient-ram
 async def update_dose_status(
     dose_id: str,
     update: DoseStatusUpdateRequest,
-    x_user_id: Optional[str] = Header("demo-patient-ramesh")
+    x_user_id: str = Header(...)
 ):
-    """
-    Confirm dose taken, mark as skipped, or record as missed.
-    If marked MISSED, checks for 2 consecutive misses and alerts caregiver.
-    """
     taken_at_dt = update.taken_at or datetime.now(timezone.utc)
-    _dose_record_cache[dose_id] = {
-        "status": update.status,
-        "taken_at": taken_at_dt if update.status == DoseStatusEnum.TAKEN else None,
-        "notes": update.notes
-    }
-
-    # Extract medication_id from dose_id e.g. "dose-med-1-0800"
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
     parts = dose_id.split("-")
     med_id = f"{parts[1]}-{parts[2]}" if len(parts) >= 3 else "med-1"
+    
+    try:
+        supabase = get_supabase()
+        # Upsert the dose log
+        payload = {
+            "dose_id": dose_id,
+            "patient_id": x_user_id,
+            "medication_id": med_id,
+            "scheduled_date": today_str,
+            "status": update.status.value,
+            "taken_at": taken_at_dt.isoformat() if update.status == DoseStatusEnum.TAKEN else None,
+            "notes": update.notes
+        }
+        # Attempt an upsert based on dose_id and scheduled_date
+        # In a real app we'd have a PK constraint on (dose_id, scheduled_date), let's just insert/update
+        existing = supabase.table("dose_logs").select("id").eq("dose_id", dose_id).eq("scheduled_date", today_str).execute()
+        if existing.data and len(existing.data) > 0:
+            supabase.table("dose_logs").update(payload).eq("id", existing.data[0]["id"]).execute()
+        else:
+            payload["id"] = str(uuid.uuid4())
+            supabase.table("dose_logs").insert(payload).execute()
+    except Exception as e:
+        logger.error(f"Error updating dose status: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
 
     escalation_info = None
     if update.status == DoseStatusEnum.MISSED:
@@ -179,20 +180,34 @@ async def update_dose_status(
 @router.post("/doses/{dose_id}/missed-advice", response_model=MissedDoseAdviceResponse)
 async def get_missed_dose_advice(
     dose_id: str,
-    current_time: Optional[datetime] = None
+    current_time: Optional[datetime] = None,
+    x_user_id: str = Header(...)
 ):
-    """
-    Deterministic clinical decision tree for missed doses.
-    Evaluates elapsed time against interval half-life.
-    """
-    # Look up medication from dose_id
-    all_doses = generate_dynamic_today_doses(_in_memory_meds)
-    matched = next((d for d in all_doses if d.id == dose_id), None)
+    parts = dose_id.split("-")
+    med_id = f"{parts[1]}-{parts[2]}" if len(parts) >= 3 else "med-1"
     
-    drug_name = matched.medication_name if matched else "Metformin"
-    sched_dt = matched.scheduled_at if matched else datetime.now(timezone.utc).replace(hour=20, minute=30)
+    try:
+        supabase = get_supabase()
+        res = supabase.table("medications").select("*").eq("id", med_id).execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Medication not found")
+        med = res.data[0]
+    except Exception as e:
+        logger.error(f"Error fetching med for advice: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+
+    drug_name = med.get("name", "Unknown")
     
-    # 12h for twice-daily Metformin, 24h for Amlodipine/Aspirin
+    # Reconstruct scheduled time from dose_id
+    # format: dose-{med_id}-{hhmm}
+    try:
+        hhmm = parts[-1]
+        hour = int(hhmm[:2])
+        minute = int(hhmm[2:])
+        sched_dt = datetime.now(timezone.utc).replace(hour=hour, minute=minute, second=0, microsecond=0)
+    except:
+        sched_dt = datetime.now(timezone.utc).replace(hour=8, minute=0, second=0)
+
     interval = 12 if "metformin" in drug_name.lower() else 24
 
     decision = evaluate_missed_dose_decision(

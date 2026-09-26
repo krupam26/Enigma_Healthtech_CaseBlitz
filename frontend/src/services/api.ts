@@ -3,6 +3,15 @@ import type { Medication } from '../types'
 const BACKEND_URL = 'http://localhost:8000'
 const ML_URL = 'http://localhost:8001'
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('access_token');
+  const userId = localStorage.getItem('user_id');
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(userId ? { 'x-user-id': userId } : {})
+  };
+};
+
 export interface InteractionCheckResponse {
   has_conflict: boolean
   severity: 'HIGH' | 'MODERATE' | 'LOW' | 'SAFE'
@@ -62,487 +71,253 @@ export interface CaregiverFeedResponse {
 export const api = {
   // 1. Safety & Drug-Drug / Allergy Checking
   async checkSafety(newDrugName: string, existingDrugs?: string[]): Promise<InteractionCheckResponse> {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/safety/check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_drug_name: newDrugName, existing_drugs: existingDrugs }),
-      })
-      if (!res.ok) throw new Error('Safety API error')
-      return await res.json()
-    } catch (err) {
-      console.warn('Backend unavailable, using fallback safety rules:', err)
-      const clean = newDrugName.trim().toLowerCase()
-      if (clean.includes('ibuprofen') || clean.includes('combiflam')) {
-        return {
-          has_conflict: true,
-          severity: 'HIGH',
-          drug_a: newDrugName,
-          drug_b: 'Aspirin 75mg',
-          warning_title: 'Severe Bleeding & Reduced Cardio-protection Risk',
-          description: 'Combining Ibuprofen with daily Aspirin drastically elevates gastrointestinal bleeding risks and inhibits Aspirin cardio-protection.',
-          clinical_guidance: 'Avoid taking Ibuprofen while on Aspirin. Consult your physician.',
-          suggested_alternative: 'Paracetamol (Acetaminophen) for fever or mild pain.',
-        }
-      }
-      return {
-        has_conflict: false,
-        severity: 'SAFE',
-        drug_a: newDrugName,
-        warning_title: 'No Direct Conflicts Detected',
-        description: `'${newDrugName}' has no known severe interactions with your current active regimen.`,
-        clinical_guidance: 'Follow standard packaging instructions or consult your pharmacist.',
-      }
-    }
+    const res = await fetch(`${BACKEND_URL}/api/safety/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ new_drug_name: newDrugName, existing_drugs: existingDrugs }),
+    })
+    if (!res.ok) throw new Error('Safety API error')
+    return await res.json()
   },
 
   // 2. Prescription Image OCR & Multimodal Extraction (Gemini)
   async extractPrescription(file: File, doctorTag?: string): Promise<PrescriptionExtractionResponse> {
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      if (doctorTag) formData.append('doctor_tag', doctorTag)
+    const formData = new FormData()
+    formData.append('file', file)
+    if (doctorTag) formData.append('doctor_tag', doctorTag)
 
-      const res = await fetch(`${BACKEND_URL}/api/ai/parse-prescription`, {
-        method: 'POST',
-        body: formData,
-      })
-      if (!res.ok) throw new Error('Extraction error')
-      return await res.json()
-    } catch (err) {
-      console.warn('Backend OCR unavailable, using fallback extraction:', err)
-      return {
-        doctor_name: doctorTag || 'Dr. K. Sharma (Cardiology & Internal Medicine)',
-        prescription_date: new Date().toISOString().split('T')[0],
-        extracted_medications: [
-          {
-            name: 'Amlodipine',
-            dosage: '5mg',
-            schedule_times: ['08:00'],
-            food_relation: 'AFTER_FOOD',
-            frequency: 'Once daily (Morning)',
-            pill_appearance: 'Small round white tablet, scored on one side',
-            packet_appearance: 'Silver aluminium strip with green & black text (10 tablets)',
-            confidence: 0.98,
-            requires_user_confirmation: false
-          },
-          {
-            name: 'Aspirin',
-            dosage: '75mg',
-            schedule_times: ['08:00'],
-            food_relation: 'AFTER_FOOD',
-            frequency: 'Once daily (Morning)',
-            pill_appearance: 'Small round peach/pink enteric-coated tablet',
-            packet_appearance: 'Silver push-through foil strip with bold red stripe "Ecosprin 75"',
-            confidence: 0.65,
-            requires_user_confirmation: true
-          },
-          {
-            name: 'Metformin',
-            dosage: '500mg',
-            schedule_times: ['08:30', '20:30'],
-            food_relation: 'AFTER_FOOD',
-            frequency: 'Twice daily (Morning & Night)',
-            pill_appearance: 'White oblong/oval tablet, stamped "500"',
-            packet_appearance: 'Silver blister strip with blue background band (15 tablets)',
-            confidence: 0.95,
-            requires_user_confirmation: false
-          },
-        ],
-        warnings: ['Low confidence on Aspirin dosage (detected 75mg). Please confirm before saving.'],
-      }
-    }
+    const res = await fetch(`${BACKEND_URL}/api/ai/parse-prescription`, {
+      method: 'POST',
+      body: formData,
+      headers: getAuthHeaders(),
+    })
+    if (!res.ok) throw new Error('Extraction error')
+    return await res.json()
   },
 
   // 3. Parse Prescription Text (WhatsApp, SMS, Doctor Notes)
   async parsePrescriptionText(text: string, doctorTag?: string): Promise<PrescriptionExtractionResponse> {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/ai/parse-text`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, doctor_tag: doctorTag }),
-      })
-      if (!res.ok) throw new Error('Text parse API error')
-      return await res.json()
-    } catch (err) {
-      console.warn('Backend text parser unavailable, parsing locally:', err)
-      return {
-        doctor_name: doctorTag || 'Caregiver / Doctor Note',
-        prescription_date: new Date().toISOString().split('T')[0],
-        extracted_medications: [
-          {
-            name: 'Metformin',
-            dosage: '500mg',
-            schedule_times: ['08:30', '20:30'],
-            food_relation: 'AFTER_FOOD',
-            frequency: 'Twice daily',
-            pill_appearance: 'White oblong tablet, stamped 500',
-            packet_appearance: 'Silver blister strip with blue band',
-            confidence: 0.92,
-            requires_user_confirmation: false,
-          },
-        ],
-        warnings: [],
-      }
-    }
+    const res = await fetch(`${BACKEND_URL}/api/ai/parse-text`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ text, doctor_tag: doctorTag }),
+    })
+    if (!res.ok) throw new Error('Text parse API error')
+    return await res.json()
   },
 
   // 4. Medication CRUD & Lifecycle (Connected to Backend & DB)
   async getActiveMedications(): Promise<Medication[]> {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/medications/active`)
-      if (!res.ok) throw new Error('Failed to fetch medications')
-      const data = await res.json()
-      // Map backend schema to frontend Medication model
-      return data.map((m: any) => ({
-        id: m.id,
-        name: m.name,
-        strength: m.dosage || '',
-        dose: '1 tablet',
-        frequency: m.frequency || (m.schedule_times?.length > 1 ? 'Twice daily' : 'Once daily'),
-        timing: m.schedule_times?.[0] ? `${m.schedule_times[0]} AM` : '08:00 AM',
-        food: m.food_relation === 'BEFORE_FOOD' ? 'Before food' : 'After food',
-        start: m.start_date || '2026-01-10',
-        end: m.end_date || '',
-        doctor: m.doctor_name || 'Dr. Sharma',
-        specialty: '',
-        source: m.is_otc ? 'OTC' : 'Prescription',
-        type: m.is_sos ? 'SOS' : m.is_otc ? 'OTC' : 'Prescription',
-        instructions: m.pill_appearance || '',
-        status: m.is_active ? (m.is_paused ? 'Paused' : 'Active') : 'Discontinued',
-        pillAppearance: m.pill_appearance,
-        packetAppearance: m.packet_appearance,
-        imageUrl: m.image_url,
-        packetImageUrl: m.packet_image_url,
-        discontinueReason: m.discontinue_reason,
-        pauseReason: m.pause_reason,
-        isPaused: m.is_paused,
-      }))
-    } catch (err) {
-      console.warn('Backend medications API error, falling back to local store:', err)
-      throw err
-    }
+    const res = await fetch(`${BACKEND_URL}/api/medications/active`, { headers: getAuthHeaders() })
+    if (!res.ok) throw new Error('Failed to fetch medications')
+    const data = await res.json()
+    // Map backend schema to frontend Medication model
+    return data.map((m: any) => ({
+      id: m.id,
+      name: m.name,
+      strength: m.dosage || '',
+      dose: '1 tablet',
+      frequency: m.frequency || (m.schedule_times?.length > 1 ? 'Twice daily' : 'Once daily'),
+      timing: m.schedule_times?.[0] ? `${m.schedule_times[0]} AM` : '08:00 AM',
+      food: m.food_relation === 'BEFORE_FOOD' ? 'Before food' : 'After food',
+      start: m.start_date || '2026-01-10',
+      end: m.end_date || '',
+      doctor: m.doctor_name || 'Dr. Sharma',
+      specialty: '',
+      source: m.is_otc ? 'OTC' : 'Prescription',
+      type: m.is_sos ? 'SOS' : m.is_otc ? 'OTC' : 'Prescription',
+      instructions: m.pill_appearance || '',
+      status: m.is_active ? (m.is_paused ? 'Paused' : 'Active') : 'Discontinued',
+      pillAppearance: m.pill_appearance,
+      packetAppearance: m.packet_appearance,
+      imageUrl: m.image_url,
+      packetImageUrl: m.packet_image_url,
+      discontinueReason: m.discontinue_reason,
+      pauseReason: m.pause_reason,
+      isPaused: m.is_paused,
+    }))
   },
 
   async addMedication(med: Partial<Medication>): Promise<any> {
-    try {
-      const payload = {
-        name: med.name,
-        dosage: med.strength || med.dose || '1 tablet',
-        is_otc: med.type === 'OTC',
-        is_sos: med.type === 'SOS',
-        food_relation: med.food?.toLowerCase().includes('before') ? 'BEFORE_FOOD' : 'AFTER_FOOD',
-        schedule_times: [med.timing?.replace(/[^\d:]/g, '') || '08:00'],
-        frequency: med.frequency || 'Once daily',
-        doctor_name: med.doctor || 'Doctor Prescribed',
-        pill_appearance: med.pillAppearance,
-        packet_appearance: med.packetAppearance,
-        image_url: med.imageUrl,
-        packet_image_url: med.packetImageUrl,
-      }
-      const res = await fetch(`${BACKEND_URL}/api/medications/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) throw new Error('Failed to add medication')
-      return await res.json()
-    } catch (err) {
-      console.warn('Backend add medication unavailable:', err)
-      return null
+    const payload = {
+      name: med.name,
+      dosage: med.strength || med.dose || '1 tablet',
+      is_otc: med.type === 'OTC',
+      is_sos: med.type === 'SOS',
+      food_relation: med.food?.toLowerCase().includes('before') ? 'BEFORE_FOOD' : 'AFTER_FOOD',
+      schedule_times: [med.timing?.replace(/[^\d:]/g, '') || '08:00'],
+      frequency: med.frequency || 'Once daily',
+      doctor_name: med.doctor || 'Doctor Prescribed',
+      pill_appearance: med.pillAppearance,
+      packet_appearance: med.packetAppearance,
+      image_url: med.imageUrl,
+      packet_image_url: med.packetImageUrl,
     }
+    const res = await fetch(`${BACKEND_URL}/api/medications/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error('Failed to add medication')
+    return await res.json()
   },
 
   async updateMedication(id: string, patch: Partial<Medication>): Promise<any> {
-    try {
-      const payload: Record<string, any> = {}
-      if (patch.name) payload.name = patch.name
-      if (patch.strength) payload.dosage = patch.strength
-      if (patch.frequency) payload.frequency = patch.frequency
-      if (patch.doctor) payload.doctor_name = patch.doctor
-      if (patch.pillAppearance) payload.pill_appearance = patch.pillAppearance
-      if (patch.packetAppearance) payload.packet_appearance = patch.packetAppearance
-      if (patch.imageUrl) payload.image_url = patch.imageUrl
-      if (patch.packetImageUrl) payload.packet_image_url = patch.packetImageUrl
+    const payload: Record<string, any> = {}
+    if (patch.name) payload.name = patch.name
+    if (patch.strength) payload.dosage = patch.strength
+    if (patch.frequency) payload.frequency = patch.frequency
+    if (patch.doctor) payload.doctor_name = patch.doctor
+    if (patch.pillAppearance) payload.pill_appearance = patch.pillAppearance
+    if (patch.packetAppearance) payload.packet_appearance = patch.packetAppearance
+    if (patch.imageUrl) payload.image_url = patch.imageUrl
+    if (patch.packetImageUrl) payload.packet_image_url = patch.packetImageUrl
 
-      const res = await fetch(`${BACKEND_URL}/api/medications/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      return res.ok ? await res.json() : null
-    } catch (err) {
-      console.warn('Backend update medication unavailable:', err)
-      return null
-    }
+    const res = await fetch(`${BACKEND_URL}/api/medications/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(payload),
+    })
+    return res.ok ? await res.json() : null
   },
 
   async adjustDose(id: string, newDosage: string, reason?: string): Promise<any> {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/medications/${id}/dose`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_dosage: newDosage, reason }),
-      })
-      return res.ok ? await res.json() : null
-    } catch (err) {
-      console.warn('Backend adjust dose unavailable:', err)
-      return null
-    }
+    const res = await fetch(`${BACKEND_URL}/api/medications/${id}/dose`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ new_dosage: newDosage, reason }),
+    })
+    return res.ok ? await res.json() : null
   },
 
   async pauseMedication(id: string, pause: boolean, reason?: string): Promise<any> {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/medications/${id}/pause`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pause, reason }),
-      })
-      return res.ok ? await res.json() : null
-    } catch (err) {
-      console.warn('Backend pause medication unavailable:', err)
-      return null
-    }
+    const res = await fetch(`${BACKEND_URL}/api/medications/${id}/pause`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ pause, reason }),
+    })
+    return res.ok ? await res.json() : null
   },
 
   async discontinueMedication(id: string, reason: string): Promise<any> {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/medications/${id}/discontinue`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason }),
-      })
-      return res.ok ? await res.json() : null
-    } catch (err) {
-      console.warn('Backend discontinue medication unavailable:', err)
-      return null
-    }
+    const res = await fetch(`${BACKEND_URL}/api/medications/${id}/discontinue`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ reason }),
+    })
+    return res.ok ? await res.json() : null
   },
 
   async deleteMedication(id: string): Promise<any> {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/medications/${id}`, {
-        method: 'DELETE',
-      })
-      return res.ok ? await res.json() : null
-    } catch (err) {
-      console.warn('Backend delete medication unavailable:', err)
-      return null
-    }
+    const res = await fetch(`${BACKEND_URL}/api/medications/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    })
+    return res.ok ? await res.json() : null
   },
 
   // 5. AI Copilot Chat Assistant
-  async chatAssistant(query: string, patientId: string = 'demo-patient-ramesh'): Promise<{ answer: string; suggested_actions?: string[] }> {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/ai/patient-qa`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, patient_id: patientId }),
-      })
-      if (!res.ok) throw new Error('AI Assistant error')
-      return await res.json()
-    } catch (err) {
-      console.warn('Backend AI unavailable, using local clinical knowledge:', err)
-      const q = query.toLowerCase()
-      if (q.includes('vomit') || q.includes('threw up')) {
-        return {
-          answer: 'If you vomited within 15 minutes of taking a pill, it usually has not been absorbed yet; you may generally retake the dose. However, if more than 30–45 minutes have passed, do NOT take another dose as much of it is already absorbed. If unsure or vomiting continues, contact your doctor.',
-          suggested_actions: ['Check Missed Dose Advice', 'Contact Caregiver Priya'],
-        }
-      }
-      if (q.includes('miss') || q.includes('forgot')) {
-        return {
-          answer: 'If you missed your dose, check your Today Timeline and tap "Missed Dose Advice". Our clinical half-interval calculator will tell you safely whether to take it now or wait for your next scheduled dose. Never take two pills at once!',
-          suggested_actions: ['View Missed Dose Advice'],
-        }
-      }
-      if (q.includes('crocin') || q.includes('fever') || q.includes('ibuprofen')) {
-        return {
-          answer: 'Be cautious with over-the-counter pain or fever meds. If you take daily Aspirin or Blood Pressure medicine, Ibuprofen can cause stomach bleeding. Paracetamol is generally safer, but run a quick check on the Safety page before taking it.',
-          suggested_actions: ['Run Safety Check'],
-        }
-      }
-      return {
-        answer: 'Always take your medications as prescribed. You can review your daily schedule and whether to take each pill before or after food directly on your Today Timeline.',
-        suggested_actions: ['View Today Schedule'],
-      }
-    }
+  async chatAssistant(query: string, patientId?: string): Promise<{ answer: string; suggested_actions?: string[] }> {
+    const res = await fetch(`${BACKEND_URL}/api/ai/patient-qa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ query, patient_id: patientId || localStorage.getItem('user_id') || '' }),
+    })
+    if (!res.ok) throw new Error('AI Assistant error')
+    return await res.json()
   },
 
   // 6. Deterministic Missed Dose Advice Engine
   async getMissedDoseAdvice(doseId: string): Promise<MissedDoseAdvice> {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/schedule/doses/${doseId}/missed-advice`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-      if (!res.ok) throw new Error('Missed dose advice error')
-      return await res.json()
-    } catch (err) {
-      return {
-        dose_id: doseId,
-        medication_name: 'Metformin 500mg',
-        action: 'TAKE_NOW',
-        message: 'Take your Metformin now. You are still within the safe window (less than halfway to your next scheduled dose). Continue your next dose at the regular time.',
-        clinical_rule: 'Elapsed time is less than half-interval (6.0h). Do NOT double-dose.',
-        urgency: 'MODERATE',
-      }
-    }
+    const res = await fetch(`${BACKEND_URL}/api/schedule/doses/${doseId}/missed-advice`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    })
+    if (!res.ok) throw new Error('Missed dose advice error')
+    return await res.json()
   },
 
   // 7. Caregiver Feed & Consent
   async getCaregiverStatus(): Promise<CaregiverFeedResponse> {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/caregiver/patient-status`)
-      if (!res.ok) throw new Error('Caregiver status error')
-      return await res.json()
-    } catch (err) {
-      return {
-        patient_id: 'demo-patient-ramesh',
-        patient_name: 'Ramesh Sharma',
-        share_med_details: false,
-        overall_adherence_pct: 66.7,
-        consecutive_misses: 2,
-        active_alerts: [
-          {
-            id: 'alert-101',
-            patient_id: 'demo-patient-ramesh',
-            alert_type: 'CONSECUTIVE_MISSED_DOSE',
-            message: 'URGENT: Ramesh Sharma has missed 2 consecutive scheduled doses (Evening doses). Please check in with him.',
-            is_resolved: false,
-            created_at: 'Today at 21:15',
-          },
-        ],
-        medications_display: null, // Hidden due to privacy consent
-      }
-    }
+    const res = await fetch(`${BACKEND_URL}/api/caregiver/patient-status`, { headers: getAuthHeaders() })
+    if (!res.ok) throw new Error('Caregiver status error')
+    return await res.json()
   },
 
   async updateCaregiverConsent(shareMedDetails: boolean): Promise<boolean> {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/caregiver/consent`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ share_med_details: shareMedDetails }),
-      })
-      return res.ok
-    } catch (err) {
-      return true
-    }
+    const res = await fetch(`${BACKEND_URL}/api/caregiver/consent`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ share_med_details: shareMedDetails }),
+    })
+    return res.ok
   },
 
   // 8. Generate Doctor Clinical Summary (ML Service)
   async generateDoctorSummary(data: any): Promise<string> {
-    try {
-      const res = await fetch(`${ML_URL}/ai/generate-summary`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) throw new Error('ML Summary error')
-      const json = await res.json()
-      return json.summary || 'Summary generated.'
-    } catch (err) {
-      return `Medication Adherence Clinical Summary:
-Patient: Ramesh Sharma (67), Managing Hypertension & Type 2 Diabetes.
-- 7-Day Adherence Rate: 78.5%
-- Observed Patterns: Evening dose misses on consecutive days (Metformin 500mg).
-- Reported Reasons: Early sleep and gastrointestinal discomfort.
-- Recommended Discussion: Evaluate shifting evening dose to with-dinner or adjusting dosing window.`
-    }
+    const res = await fetch(`${ML_URL}/ai/generate-summary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error('ML Summary error')
+    const json = await res.json()
+    return json.summary || 'Summary generated.'
   },
 
   // 9. Authentication & User Profile Management (Supabase / DB Connected)
   async signup(fullName: string, email: string, password: string, role = 'PATIENT') {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ full_name: fullName, email, password, role }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || 'Signup failed')
-      return data
-    } catch (err: any) {
-      console.warn('Backend signup error, using offline store:', err)
-      return {
-        status: 'success',
-        user_id: 'user-' + Date.now(),
-        email,
-        full_name: fullName,
-        message: 'Account created successfully',
-      }
-    }
+    const res = await fetch(`${BACKEND_URL}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ full_name: fullName, email, password, role }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.detail || 'Signup failed')
+    localStorage.setItem('access_token', data.access_token || '')
+    localStorage.setItem('user_id', data.user_id || '')
+    return data
   },
 
   async login(email: string, password: string) {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || 'Login failed')
-      return data
-    } catch (err: any) {
-      console.warn('Backend login fallback:', err)
-      // Allow demo login
-      if (email.includes('@') && password.length >= 4) {
-        return {
-          status: 'success',
-          user_id: 'demo-patient-ramesh',
-          email,
-          full_name: email.split('@')[0],
-          message: 'Login successful',
-        }
-      }
-      throw err
-    }
+    const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ email, password }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.detail || 'Login failed')
+    localStorage.setItem('access_token', data.access_token || '')
+    localStorage.setItem('user_id', data.user_id || '')
+    return data
   },
 
   async forgotPassword(email: string) {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-      return await res.json()
-    } catch (err) {
-      return {
-        status: 'success',
-        message: `Password reset link sent to ${email}. Please check your inbox.`,
-      }
-    }
+    const res = await fetch(`${BACKEND_URL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ email }),
+    })
+    return await res.json()
   },
 
-  async getProfile(userId = 'demo-patient-ramesh') {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/profile/me`, {
-        headers: { 'x-user-id': userId },
-      })
-      if (!res.ok) throw new Error('Failed to fetch profile')
-      return await res.json()
-    } catch (err) {
-      return null
-    }
+  async getProfile(userId?: string) {
+    const res = await fetch(`${BACKEND_URL}/api/profile/me`, {
+      headers: { ...getAuthHeaders() },
+    })
+    if (!res.ok) throw new Error('Failed to fetch profile')
+    return await res.json()
   },
 
-  async updateProfile(profileData: any, userId = 'demo-patient-ramesh') {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/profile/me`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId,
-        },
-        body: JSON.stringify(profileData),
-      })
-      return await res.json()
-    } catch (err) {
-      return { status: 'success', profile: profileData }
-    }
+  async updateProfile(profileData: any, userId?: string) {
+    const res = await fetch(`${BACKEND_URL}/api/profile/me`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(profileData),
+    })
+    return await res.json()
   },
 }
-

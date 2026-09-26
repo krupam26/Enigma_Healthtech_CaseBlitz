@@ -8,6 +8,8 @@ import { api, type MissedDoseAdvice, type CaregiverFeedResponse } from '../servi
 import { speakReminder } from '../utils/speech'
 import type { DoseStatus } from '../types'
 
+import { useNavigate, Navigate } from 'react-router-dom'
+
 export default function Dashboard() {
   const t = useT()
   const lang = useStore((s) => s.lang)
@@ -21,6 +23,10 @@ export default function Dashboard() {
   const [adviceModal, setAdviceModal] = useState<MissedDoseAdvice | null>(null)
   const [loadingAdvice, setLoadingAdvice] = useState(false)
   const [caregiverFeed, setCaregiverFeed] = useState<CaregiverFeedResponse | null>(null)
+
+  if (user?.role === 'CAREGIVER') {
+    return <Navigate to="/caregiver-dashboard" replace />
+  }
 
   const todays = events.filter((e) => e.date === 'today')
   const taken = todays.filter((e) => e.status === 'Taken').length

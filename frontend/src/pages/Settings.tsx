@@ -8,15 +8,10 @@ export default function Settings() {
   const settings = useStore((s) => s.settings)
   const user = useStore((s) => s.user)
   const updateSettings = useStore((s) => s.updateSettings)
-  const resetDemoData = useStore((s) => s.resetDemoData)
   const show = useToast((s) => s.show)
   const navigate = useNavigate()
 
-  const reset = () => {
-    resetDemoData()
-    show('Demo data reset')
-    navigate('/')
-  }
+
 
   return (
     <AppLayout title="Settings" meta="Notifications, accessibility, privacy and account">
@@ -51,7 +46,6 @@ export default function Settings() {
       <div className="panel">
         <h3 className="text-[16px] font-semibold text-teal-950 mb-4">Account</h3>
         <p className="text-[14px] text-inksoft">{user.email || '—'}</p>
-        <button className="mini-btn mt-3.5" onClick={reset}>Reset demo data</button>
       </div>
     </AppLayout>
   )

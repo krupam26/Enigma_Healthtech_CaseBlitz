@@ -13,6 +13,7 @@ class Settings:
     PORT: int = int(os.getenv("PORT", 8000))
     HOST: str = os.getenv("HOST", "0.0.0.0")
     ML_SERVICE_URL: str = os.getenv("ML_SERVICE_URL", "http://localhost:8001")
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 
     @property
     def is_supabase_configured(self) -> bool:

@@ -7,7 +7,7 @@ import { loadFromStorage, saveToStorage, clearStorage } from './storage'
 
 interface Store extends AppState {
   setLang: (lang: Lang) => void
-  login: (email?: string) => void
+  login: (data: { email?: string, role?: string }) => void
   signup: (name: string, email: string, lang: Lang) => void
   logout: () => void
   saveProfile: (patch: Partial<UserProfile>) => void
@@ -71,10 +71,10 @@ export const useStore = create<Store>((set, get) => ({
 
   setLang: (lang) => { set({ lang }); persist(get) },
 
-  login: (email) => {
+  login: ({ email, role }) => {
     set((s) => ({
       loggedIn: true,
-      user: s.user.name ? s.user : { ...s.user, name: 'Ramesh', email: email || 'ramesh@medcheck.demo', age: '67', conditions: 'Type 2 Diabetes, Hypertension' },
+      user: { ...s.user, email: email || '', role: role || s.user.role },
     }))
     persist(get)
   },

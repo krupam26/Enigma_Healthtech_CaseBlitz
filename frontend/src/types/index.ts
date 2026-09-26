@@ -68,6 +68,7 @@ export interface UserProfile {
   conditions: string
   emergency: string
   doctor: string
+  role?: string
 }
 
 export interface OtcCheck {

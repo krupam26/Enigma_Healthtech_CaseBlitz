@@ -2,6 +2,11 @@ from fastapi import APIRouter, UploadFile, File, Form
 from typing import Optional, List
 import re
 import httpx
+
+from groq import AsyncGroq
+from app.config import settings
+from app.db import get_supabase
+from fastapi import Header, HTTPException
 from pydantic import BaseModel
 from app.config import settings
 
@@ -30,7 +35,7 @@ class PrescriptionTextParseRequest(BaseModel):
 
 class ChatQueryRequest(BaseModel):
     query: str
-    patient_id: Optional[str] = "demo-patient-ramesh"
+    patient_id: str
 
 # Clinical knowledge base for visual pill & packet cues to assist elderly patients
 KNOWN_MED_VISUALS = {
@@ -277,26 +282,38 @@ async def parse_prescription_text(payload: PrescriptionTextParseRequest):
     )
 
 @router.post("/patient-qa")
-async def patient_chat_assistant(payload: ChatQueryRequest):
+async def patient_chat_assistant(payload: ChatQueryRequest, x_user_id: str = Header(...)):
     """
-    AI Patient Assistant endpoint: Explains prescriptions, side effects, and missed doses
-    in plain, comforting language for elderly patients.
+    AI Patient Assistant endpoint using Groq API.
     """
-    q = payload.query.lower()
-    
-    # Try calling ML service chatbot first
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                f"{settings.ML_SERVICE_URL}/ai/chat",
-                json={"question": payload.query, "medication_context": "Patient Ramesh (67), on Amlodipine, Metformin, Aspirin."}
-            )
-            if resp.status_code == 200:
-                answer = resp.json().get("answer")
-                if answer:
-                    return {"answer": answer, "suggested_actions": ["Review Medication Plan", "Contact Caregiver"]}
-    except Exception:
-        pass
+        supabase = get_supabase()
+        meds_res = supabase.table("medications").select("name, dosage, frequency").eq("patient_id", x_user_id).eq("is_active", True).execute()
+        meds_context = ", ".join([f"{m['name']} {m.get('dosage','')} ({m.get('frequency','')})" for m in meds_res.data]) if meds_res.data else "No active medications."
+        
+        system_prompt = f"""You are a helpful and comforting AI health assistant for an elderly patient. 
+Your tone must be warm, reassuring, and very simple to understand. Avoid complex medical jargon.
+The patient is currently taking the following medications: {meds_context}.
+If the patient asks about missing a dose, advise them to check their 'Missed Dose Advice' on the dashboard.
+If they ask about taking OTC drugs like ibuprofen or crocin, remind them to use the Safety Checker if it might interact with their current medications."""
+        
+        client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+        chat_completion = await client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": payload.query}
+            ],
+            model="llama3-8b-8192",
+            temperature=0.3,
+            max_tokens=150,
+        )
+        
+        answer = chat_completion.choices[0].message.content
+        return {"answer": answer, "suggested_actions": ["View Today's Schedule", "Run Safety Check"]}
+    except Exception as e:
+        logger.error(f"Groq API Error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get answer from AI Assistant")
+
 
     if "miss" in q or "forgot" in q:
         return {

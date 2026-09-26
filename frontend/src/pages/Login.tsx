@@ -33,10 +33,35 @@ export default function Login() {
     setLoading(true)
     try {
       const res = await api.login(email, password)
-      login(email)
+      login({ email, role: 'PATIENT' }) // Default fallback if no profile data, the Navbar will check user.role
       navigate(profileComplete ? '/dashboard' : '/profile-setup')
     } catch (err: any) {
       setError(err?.message || 'Invalid email or password. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDemoLogin = async (role: 'PATIENT' | 'CAREGIVER') => {
+    const demoEmail = role === 'PATIENT' ? 'patient@demo.com' : 'caregiver@demo.com'
+    const demoPass = 'password123'
+    const fullName = role === 'PATIENT' ? 'Ramesh (Demo Patient)' : 'Priya (Demo Caregiver)'
+    setLoading(true)
+    setError('')
+
+    try {
+      await api.login(demoEmail, demoPass)
+      login({ email: demoEmail, role })
+      navigate('/dashboard')
+    } catch (err: any) {
+      try {
+        await api.signup(fullName, demoEmail, demoPass, role)
+        await api.login(demoEmail, demoPass)
+        login({ email: demoEmail, role })
+        navigate('/dashboard')
+      } catch (signupErr: any) {
+        setError('Failed to log into demo account. Please try manual signup.')
+      }
     } finally {
       setLoading(false)
     }
@@ -56,13 +81,6 @@ export default function Login() {
     }
   }
 
-  const quickDemoLogin = () => {
-    setEmail('ramesh@medcheck.demo')
-    setPassword('password123')
-    login('ramesh@medcheck.demo')
-    navigate(profileComplete ? '/dashboard' : '/profile-setup')
-  }
-
   return (
     <div className="min-h-screen grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
       {/* Left visual column */}
@@ -77,7 +95,7 @@ export default function Login() {
       </div>
 
       {/* Right form column */}
-      <div className="flex items-center justify-center p-8 sm:p-12 relative bg-white">
+      <div className="flex items-center justify-center p-8 sm:p-12 relative bg-white overflow-y-auto">
         <div className="absolute top-6 right-8">
           <LangSwitcher />
         </div>
@@ -96,7 +114,33 @@ export default function Login() {
             </div>
           )}
 
-          <form onSubmit={submit} className="mt-6 space-y-4">
+          {/* HARDCODED DEMO LOGIN BUTTONS */}
+          <div className="flex flex-col gap-3 mt-6">
+            <button
+              onClick={() => handleDemoLogin('PATIENT')}
+              type="button"
+              disabled={loading}
+              className="w-full py-3.5 text-base font-bold shadow-sm border-2 border-teal-600 text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-xl transition-all"
+            >
+              Log In as Patient
+            </button>
+            <button
+              onClick={() => handleDemoLogin('CAREGIVER')}
+              type="button"
+              disabled={loading}
+              className="w-full py-3.5 text-base font-bold shadow-sm border-2 border-slate-600 text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all"
+            >
+              Log In as Caregiver
+            </button>
+          </div>
+
+          <div className="flex items-center gap-4 my-6">
+            <div className="h-px bg-slate-200 flex-1"></div>
+            <span className="text-sm font-semibold text-slate-400 uppercase tracking-wider">OR</span>
+            <div className="h-px bg-slate-200 flex-1"></div>
+          </div>
+
+          <form onSubmit={submit} className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('auth.email')}</label>
               <input
@@ -145,17 +189,6 @@ export default function Login() {
               {loading ? 'Logging in...' : t('auth.loginBtn')}
             </button>
           </form>
-
-          {/* Quick Demo Access Button */}
-          <div className="mt-4">
-            <button
-              type="button"
-              className="w-full py-3 border-2 border-dashed border-teal-600/40 text-teal-900 bg-teal-50/50 hover:bg-teal-50 rounded-xl font-semibold text-sm transition-colors"
-              onClick={quickDemoLogin}
-            >
-              ⚡ Quick Demo Login (Ramesh Ji)
-            </button>
-          </div>
 
           <div className="mt-7 text-center text-sm text-slate-600">
             {t('auth.newAccount')}{' '}
@@ -232,4 +265,3 @@ export default function Login() {
     </div>
   )
 }
-

@@ -10,10 +10,9 @@ import ProfileSetup from './pages/ProfileSetup'
 import Dashboard from './pages/Dashboard'
 import Medications from './pages/Medications'
 import Schedule from './pages/Schedule'
-import Prescriptions from './pages/Prescriptions'
+
 import Adherence from './pages/Adherence'
 import Safety from './pages/Safety'
-import Assistant from './pages/Assistant'
 import CaregiverDashboard from './pages/CaregiverDashboard'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
@@ -37,10 +36,8 @@ export default function App() {
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/medications" element={<ProtectedRoute><Medications /></ProtectedRoute>} />
         <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
-        <Route path="/prescriptions" element={<ProtectedRoute><Prescriptions /></ProtectedRoute>} />
         <Route path="/adherence" element={<ProtectedRoute><Adherence /></ProtectedRoute>} />
         <Route path="/safety-dashboard" element={<ProtectedRoute><Safety /></ProtectedRoute>} />
-        <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
         <Route path="/caregiver-dashboard" element={<ProtectedRoute><CaregiverDashboard /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
