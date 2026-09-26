@@ -41,7 +41,10 @@ export default function Dashboard() {
     instructions: 'Take after dinner',
   }
 
+  const syncSchedule = useStore((s) => s.syncSchedule)
+
   useEffect(() => {
+    syncSchedule()
     api.getCaregiverStatus().then((feed) => setCaregiverFeed(feed)).catch(() => {})
   }, [])
 

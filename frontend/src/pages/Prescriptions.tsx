@@ -50,24 +50,28 @@ export default function Prescriptions() {
   const confirmAll = () => {
     if (extractedMeds.length === 0) return
     extractedMeds.forEach((m) => {
-      addMedication({
+      const medData = {
         name: m.name,
         strength: m.dosage,
         dose: '1 tablet',
-        frequency: m.schedule_times.length > 1 ? 'Twice daily' : 'Once daily',
-        timing: m.schedule_times[0] || '08:00 AM',
-        food: m.food_relation === 'BEFORE_FOOD' ? 'Before breakfast' : 'After food',
+        frequency: m.frequency || (m.schedule_times.length > 1 ? 'Twice daily' : 'Once daily'),
+        timing: m.schedule_times[0] ? `${m.schedule_times[0]} AM` : '08:00 AM',
+        food: m.food_relation === 'BEFORE_FOOD' ? 'Before food' : 'After food',
         doctor: doctorName,
         specialty: 'Cardiology',
         start: new Date().toISOString().split('T')[0],
         end: '',
-        instructions: 'Take with water as prescribed',
-        status: 'Active',
-        type: 'Prescription',
+        instructions: m.pill_appearance || 'Take with water as prescribed',
+        status: 'Active' as const,
+        type: 'Prescription' as const,
         source: 'AI Extracted Prescription',
-      })
+        pillAppearance: m.pill_appearance,
+        packetAppearance: m.packet_appearance,
+      }
+      addMedication(medData)
+      api.addMedication(medData)
     })
-    show('All verified medications added to active schedule!')
+    show(`All ${extractedMeds.length} verified medications added to active schedule!`)
     navigate('/medications')
   }
 

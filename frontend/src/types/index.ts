@@ -26,6 +26,9 @@ export interface Medication {
   discontinueReason?: string
   pauseReason?: string
   isPaused?: boolean
+  useCase?: string
+  foodTips?: string
+  sideEffects?: string
 }
 
 export type DoseStatus = 'Taken' | 'Missed' | 'Upcoming' | 'Late' | 'Not Recorded'

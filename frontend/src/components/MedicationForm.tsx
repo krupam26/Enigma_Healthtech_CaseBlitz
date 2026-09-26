@@ -22,23 +22,26 @@ const EMPTY: FormValues = {
   packetAppearance: 'Silver aluminium strip with green & black text (10 tablets)',
   imageUrl: '',
   packetImageUrl: '',
+  useCase: '',
+  foodTips: '',
+  sideEffects: '',
 }
 
 const PILL_PRESETS = [
-  { label: '⚪ Round White (Scored)', value: 'Small round white tablet, scored on one side', icon: '⚪' },
-  { label: '🟡 Yellow Oval (Coated)', value: 'Yellow oval enteric-coated tablet', icon: '🟡' },
-  { label: '🍑 Peach / Pink Round', value: 'Small round peach/pink enteric-coated tablet', icon: '🍑' },
-  { label: '💊 Blue & White Capsule', value: 'Blue and white two-tone gelatin capsule', icon: '💊' },
-  { label: '🟢 Green Oblong', value: 'Green oblong tablet with central break line', icon: '🟢' },
-  { label: '🔴 Red Caplet', value: 'Red film-coated caplet tablet', icon: '🔴' },
+  { label: 'Round White (Scored)', value: 'Small round white tablet, scored on one side' },
+  { label: 'Yellow Oval (Coated)', value: 'Yellow oval enteric-coated tablet' },
+  { label: 'Peach / Pink Round', value: 'Small round peach/pink enteric-coated tablet' },
+  { label: 'Blue & White Capsule', value: 'Blue and white two-tone gelatin capsule' },
+  { label: 'Green Oblong', value: 'Green oblong tablet with central break line' },
+  { label: 'Red Caplet', value: 'Red film-coated caplet tablet' },
 ]
 
 const PACKET_PRESETS = [
-  { label: '🥈 Silver Strip (Blue Band)', value: 'Silver blister strip with blue background band (15 tablets)' },
-  { label: '🥈 Silver Strip (Red Stripe)', value: 'Silver push-through foil strip with bold red stripe (10 tablets)' },
-  { label: '🛡️ Alu-Alu Silver Blister', value: 'Heavy Alu-Alu opaque silver blister pack (10 tablets)' },
-  { label: '📦 Medicine Box / Carton', value: 'White carton box with manufacturer logo and dosage instructions' },
-  { label: '🍾 Amber Syrup Bottle', value: 'Amber liquid bottle with 5ml/10ml measuring cup cap' },
+  { label: 'Silver Strip (Blue Band)', value: 'Silver blister strip with blue background band (15 tablets)' },
+  { label: 'Silver Strip (Red Stripe)', value: 'Silver push-through foil strip with bold red stripe (10 tablets)' },
+  { label: 'Alu-Alu Silver Blister', value: 'Heavy Alu-Alu opaque silver blister pack (10 tablets)' },
+  { label: 'Medicine Carton Box', value: 'White carton box with manufacturer logo and dosage instructions' },
+  { label: 'Amber Syrup Bottle', value: 'Amber liquid bottle with 5ml/10ml measuring cup cap' },
 ]
 
 export default function MedicationForm({
@@ -74,7 +77,7 @@ export default function MedicationForm({
     if (!file) return
 
     setIsProcessing(true)
-    setOcrStatus('Prescription photo analyze ho rahi hai (Analyzing photo with AI)...')
+    setOcrStatus('Analyzing photo with Gemini Vision AI...')
     speakText('Dawai ki photo padhi ja rahi hai. Kripya do second intezaar karein.', 'hi')
 
     try {
@@ -92,13 +95,13 @@ export default function MedicationForm({
           pillAppearance: topMed.pill_appearance || prev.pillAppearance,
           packetAppearance: topMed.packet_appearance || prev.packetAppearance,
         }))
-        setOcrStatus(`Dawai "${topMed.name}" details apne aap bhar gayi hain! Kripya neeche check karein.`)
+        setOcrStatus(`Details for "${topMed.name}" auto-filled. Please verify compulsory fields below.`)
         speakText(`Dawai ${topMed.name} ki jankari auto-fill ho gayi hai. Ek baar verify kar lijiye.`, 'hi')
       } else {
-        setOcrStatus('Photo saaf nahi aayi. Kripya neeche manual fill karein.')
+        setOcrStatus('Could not read image clearly. Please fill fields below.')
       }
-    } catch (err) {
-      setOcrStatus('Image scan fallback active. Form auto-populated.')
+    } catch {
+      setOcrStatus('Image scan fallback active. Form populated.')
     } finally {
       setIsProcessing(false)
     }
@@ -109,7 +112,7 @@ export default function MedicationForm({
     if (!pastedText.trim()) return
 
     setIsProcessing(true)
-    setOcrStatus('Pasted prescription message parse ho raha hai...')
+    setOcrStatus('Parsing pasted prescription text...')
     try {
       const result = await api.parsePrescriptionText(pastedText)
       if (result.extracted_medications && result.extracted_medications.length > 0) {
@@ -125,11 +128,11 @@ export default function MedicationForm({
           pillAppearance: topMed.pill_appearance || prev.pillAppearance,
           packetAppearance: topMed.packet_appearance || prev.packetAppearance,
         }))
-        setOcrStatus(`Pasted text se "${topMed.name}" auto-fill ho gaya!`)
+        setOcrStatus(`Extracted "${topMed.name}" from message.`)
         speakText(`Message se ${topMed.name} ki details bhar di gayi hain.`, 'hi')
       }
-    } catch (err) {
-      setOcrStatus('Parse completed with local rules.')
+    } catch {
+      setOcrStatus('Parsed with local clinical rules.')
     } finally {
       setIsProcessing(false)
     }
@@ -138,10 +141,10 @@ export default function MedicationForm({
   // Validate compulsory fields
   const validateAndSubmit = () => {
     const errs: Record<string, string> = {}
-    if (!values.name.trim()) errs.name = 'Medicine Name is compulsory (Dawai ka naam zaroori hai)'
-    if (!values.strength.trim()) errs.strength = 'Strength / Power is compulsory (e.g. 500 mg, 5 mg)'
-    if (!values.frequency.trim()) errs.frequency = 'Frequency is compulsory (e.g. Once daily, Twice daily)'
-    if (!values.food.trim()) errs.food = 'Food timing is compulsory (Khane se pehle ya baad)'
+    if (!values.name.trim()) errs.name = 'Medicine Name is compulsory'
+    if (!values.strength.trim()) errs.strength = 'Strength / Power is compulsory (e.g. 500 mg)'
+    if (!values.frequency.trim()) errs.frequency = 'Frequency is compulsory'
+    if (!values.food.trim()) errs.food = 'Food timing is compulsory'
     if (!values.timing.trim()) errs.timing = 'Time is compulsory (e.g. 08:00 AM)'
 
     if (Object.keys(errs).length > 0) {
@@ -154,52 +157,48 @@ export default function MedicationForm({
   }
 
   return (
-    <div className="bg-white border-2 border-teal-600 rounded-3xl p-6 sm:p-8 mb-8 shadow-xl">
+    <div className="bg-white border-2 border-teal-600 rounded-3xl p-6 sm:p-8 mb-8 shadow-md">
       {/* Header with Senior Audio Helper */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-gray-200">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-teal-950 flex items-center gap-3">
-            <span>{existing ? '✏️ Edit Medication' : '➕ Add New Medication'}</span>
-            <span className="text-sm font-normal px-3 py-1 rounded-full bg-teal-100 text-teal-800">
-              Senior-Friendly Form
-            </span>
+          <h2 className="text-2xl sm:text-3xl font-bold text-teal-950">
+            {existing ? 'Edit Medication' : 'Add Medication'}
           </h2>
-          <p className="text-base text-gray-600 mt-1">
-            Easy to read, compulsory fields marked with <span className="text-red-500 font-bold">*</span>, with visual pill & packet recognition.
+          <p className="text-base text-slate-600 mt-1">
+            Compulsory fields are marked with <span className="text-red-600 font-bold">*</span>. Visual identification helps prevent pill mix-ups.
           </p>
         </div>
 
         <button
           type="button"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-semibold text-base transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-950 font-semibold text-base transition-colors"
           onClick={() => speakFormGuide(activeTab, 'hi')}
           title="Listen in Hindi"
         >
-          <span className="text-xl">🔊</span>
+          <span>🔊</span>
           <span>Suniye (Listen Guide)</span>
         </button>
       </div>
 
       {/* 3 Input Methods for Auto-fill */}
       {!existing && (
-        <div className="my-6 p-4 rounded-2xl bg-teal-50/60 border border-teal-200">
+        <div className="my-6 p-4 rounded-2xl bg-slate-50 border border-slate-200">
           <div className="text-sm font-bold uppercase tracking-wider text-teal-900 mb-3">
-            Choose Quick Auto-Fill Method:
+            Choose Input Method:
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <button
               type="button"
               className={`p-4 rounded-xl text-left border-2 transition-all flex flex-col justify-between ${
                 activeTab === 'upload'
-                  ? 'bg-white border-teal-600 shadow-md ring-2 ring-teal-500/20'
+                  ? 'bg-white border-teal-600 shadow-sm ring-1 ring-teal-600'
                   : 'bg-white/80 border-gray-200 hover:border-teal-300 text-gray-700'
               }`}
               onClick={() => {
                 setActiveTab('upload')
-                speakFormGuide('image', 'hi')
+                speakFormGuide('upload', 'hi')
               }}
             >
-              <div className="text-2xl mb-1">📷</div>
               <div className="font-bold text-base text-teal-950">1. Upload Photo</div>
               <div className="text-xs text-gray-500 mt-1">Prescription paper or medicine packet photo</div>
             </button>
@@ -208,15 +207,14 @@ export default function MedicationForm({
               type="button"
               className={`p-4 rounded-xl text-left border-2 transition-all flex flex-col justify-between ${
                 activeTab === 'paste'
-                  ? 'bg-white border-teal-600 shadow-md ring-2 ring-teal-500/20'
+                  ? 'bg-white border-teal-600 shadow-sm ring-1 ring-teal-600'
                   : 'bg-white/80 border-gray-200 hover:border-teal-300 text-gray-700'
               }`}
               onClick={() => {
                 setActiveTab('paste')
-                speakFormGuide('text', 'hi')
+                speakFormGuide('paste', 'hi')
               }}
             >
-              <div className="text-2xl mb-1">📋</div>
               <div className="font-bold text-base text-teal-950">2. Paste Text</div>
               <div className="text-xs text-gray-500 mt-1">WhatsApp message or doctor's SMS note</div>
             </button>
@@ -225,7 +223,7 @@ export default function MedicationForm({
               type="button"
               className={`p-4 rounded-xl text-left border-2 transition-all flex flex-col justify-between ${
                 activeTab === 'manual'
-                  ? 'bg-white border-teal-600 shadow-md ring-2 ring-teal-500/20'
+                  ? 'bg-white border-teal-600 shadow-sm ring-1 ring-teal-600'
                   : 'bg-white/80 border-gray-200 hover:border-teal-300 text-gray-700'
               }`}
               onClick={() => {
@@ -233,9 +231,8 @@ export default function MedicationForm({
                 speakFormGuide('manual', 'hi')
               }}
             >
-              <div className="text-2xl mb-1">✍️</div>
               <div className="font-bold text-base text-teal-950">3. Direct Manual Entry</div>
-              <div className="text-xs text-gray-500 mt-1">Type or select details step-by-step</div>
+              <div className="text-xs text-gray-500 mt-1">Type details step-by-step</div>
             </button>
           </div>
 
@@ -243,7 +240,7 @@ export default function MedicationForm({
           {activeTab === 'upload' && (
             <div className="mt-4 p-5 bg-white rounded-xl border border-teal-300">
               <label className="block text-base font-semibold text-teal-950 mb-2">
-                📸 Choose Prescription or Medicine Box Photo:
+                Choose Prescription or Medicine Packet Photo:
               </label>
               <input
                 type="file"
@@ -252,9 +249,6 @@ export default function MedicationForm({
                 disabled={isProcessing}
                 className="block w-full text-base text-gray-700 file:mr-4 file:py-3 file:px-5 file:rounded-xl file:border-0 file:text-base file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700 cursor-pointer"
               />
-              <p className="text-sm text-gray-500 mt-2">
-                💡 Tip: You can take a clear picture of the medicine blister strip or prescription sheet.
-              </p>
             </div>
           )}
 
@@ -262,13 +256,13 @@ export default function MedicationForm({
           {activeTab === 'paste' && (
             <div className="mt-4 p-5 bg-white rounded-xl border border-teal-300">
               <label className="block text-base font-semibold text-teal-950 mb-2">
-                📋 Paste Doctor's WhatsApp or SMS prescription:
+                Paste Doctor's WhatsApp or SMS prescription:
               </label>
               <textarea
                 rows={3}
                 value={pastedText}
                 onChange={(e) => setPastedText(e.target.value)}
-                placeholder="Example: Tab Metformin 500mg 1 tab twice daily after meals (morning 8:30am and night 8:30pm)"
+                placeholder="Example: Tab Metformin 500mg twice daily after meals (morning 8:30am and night 8:30pm)"
                 className="w-full p-3.5 text-base border-2 border-gray-300 rounded-xl focus:border-teal-600 outline-none"
               />
               <div className="flex justify-end mt-3">
@@ -276,19 +270,17 @@ export default function MedicationForm({
                   type="button"
                   onClick={handleTextParse}
                   disabled={isProcessing || !pastedText.trim()}
-                  className="px-6 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-base transition-colors shadow-sm disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-base transition-colors disabled:opacity-50"
                 >
-                  {isProcessing ? 'Parsing...' : '⚡ Auto-Fill Form from Text'}
+                  {isProcessing ? 'Parsing...' : 'Auto-Fill Form from Text'}
                 </button>
               </div>
             </div>
           )}
 
-          {/* Status Alert Banner */}
           {ocrStatus && (
-            <div className="mt-3 p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-base font-medium flex items-center gap-2">
-              <span>✅</span>
-              <span>{ocrStatus}</span>
+            <div className="mt-3 p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-base font-medium">
+              {ocrStatus}
             </div>
           )}
         </div>
@@ -296,7 +288,6 @@ export default function MedicationForm({
 
       {/* Main Medication Form Fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
-        {/* Medicine Name - COMPULSORY */}
         <Field label="Medicine Name" required error={errors.name}>
           <input
             value={values.name}
@@ -308,7 +299,6 @@ export default function MedicationForm({
           />
         </Field>
 
-        {/* Strength / Power - COMPULSORY */}
         <Field label="Strength / Power" required error={errors.strength}>
           <input
             value={values.strength}
@@ -320,7 +310,6 @@ export default function MedicationForm({
           />
         </Field>
 
-        {/* Dose Quantity */}
         <Field label="Dose (How many pills?)">
           <input
             value={values.dose}
@@ -330,22 +319,20 @@ export default function MedicationForm({
           />
         </Field>
 
-        {/* Frequency - COMPULSORY */}
         <Field label="Frequency (How often?)" required error={errors.frequency}>
           <select
             value={values.frequency}
             onChange={(e) => set('frequency', e.target.value)}
             className="w-full p-3.5 text-base font-semibold rounded-xl border-2 border-gray-300 focus:border-teal-600 outline-none bg-white"
           >
-            <option value="Once daily">Once daily (Din mein 1 baar)</option>
-            <option value="Twice daily">Twice daily (Din mein 2 baar - Subah aur Raat)</option>
-            <option value="Three times daily">Three times daily (Din mein 3 baar)</option>
-            <option value="As needed (SOS)">As needed (Jab zaroorat ho - SOS)</option>
-            <option value="Alternate days">Alternate days (Ek din chhod kar)</option>
+            <option value="Once daily">Once daily (Once per day)</option>
+            <option value="Twice daily">Twice daily (Morning & Night)</option>
+            <option value="Three times daily">Three times daily</option>
+            <option value="As needed (SOS)">As needed (SOS)</option>
+            <option value="Alternate days">Alternate days</option>
           </select>
         </Field>
 
-        {/* Timing - COMPULSORY */}
         <Field label="Scheduled Timing" required error={errors.timing}>
           <input
             value={values.timing}
@@ -355,8 +342,7 @@ export default function MedicationForm({
           />
         </Field>
 
-        {/* Food Relationship - COMPULSORY */}
-        <Field label="Food Relationship (Khane ke sath)" required error={errors.food}>
+        <Field label="Food Relationship" required error={errors.food}>
           <select
             value={values.food}
             onChange={(e) => set('food', e.target.value)}
@@ -366,12 +352,11 @@ export default function MedicationForm({
             <option value="Before food">Before food (Khane se pehle)</option>
             <option value="Empty stomach">Empty stomach (Subah khali pet)</option>
             <option value="With food">With food (Khane ke sath)</option>
-            <option value="No food relation">No food relation (Kisi bhi samay)</option>
+            <option value="No food relation">No food relation (Any time)</option>
           </select>
         </Field>
 
-        {/* Prescribing Doctor */}
-        <Field label="Doctor / Hospital Name">
+        <Field label="Doctor / Clinic Name">
           <input
             value={values.doctor}
             onChange={(e) => set('doctor', e.target.value)}
@@ -380,63 +365,81 @@ export default function MedicationForm({
           />
         </Field>
 
-        {/* Medication Type */}
-        <Field label="Category / Type">
+        <Field label="Category">
           <select
             value={values.type}
             onChange={(e) => set('type', e.target.value as MedType)}
             className="w-full p-3.5 text-base font-medium rounded-xl border-2 border-gray-300 focus:border-teal-600 outline-none bg-white"
           >
-            <option value="Prescription">Regular Prescription (Doctor advised)</option>
-            <option value="OTC">OTC / Self-taken (Crocin, Painkiller, etc.)</option>
-            <option value="Temporary">Temporary Course (5-7 days Antibiotic)</option>
-            <option value="SOS">SOS (Only in emergency/discomfort)</option>
+            <option value="Prescription">Regular Prescription</option>
+            <option value="OTC">OTC / Temporary (Fever, Painkiller)</option>
+            <option value="Temporary">Short Course (5-7 days)</option>
+            <option value="SOS">SOS (As needed)</option>
           </select>
         </Field>
       </div>
 
-      {/* SECTION: Visual Pill & Packet Recognition (Crucial for Seniors!) */}
-      <div className="mt-8 pt-6 border-t-2 border-dashed border-teal-200">
+      {/* Clinical Details: Use Case, Food Tips & Side Effects */}
+      <div className="mt-8 pt-6 border-t border-gray-200">
+        <h3 className="text-xl font-bold text-teal-950 mb-3">
+          Clinical Guidance & Advisory
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Field label="Primary Use Case (Why prescribed)">
+            <input
+              value={values.useCase || ''}
+              onChange={(e) => set('useCase', e.target.value)}
+              placeholder="e.g. Blood pressure control"
+              className="w-full p-3 text-base rounded-xl border border-gray-300 focus:border-teal-600 outline-none"
+            />
+          </Field>
+
+          <Field label="Food Tips / Nutrition Advisory">
+            <input
+              value={values.foodTips || ''}
+              onChange={(e) => set('foodTips', e.target.value)}
+              placeholder="e.g. Take with water; avoid grapefruit"
+              className="w-full p-3 text-base rounded-xl border border-gray-300 focus:border-teal-600 outline-none"
+            />
+          </Field>
+
+          <Field label="Known Common Side Effects">
+            <input
+              value={values.sideEffects || ''}
+              onChange={(e) => set('sideEffects', e.target.value)}
+              placeholder="e.g. Mild dizziness on standing"
+              className="w-full p-3 text-base rounded-xl border border-gray-300 focus:border-teal-600 outline-none"
+            />
+          </Field>
+        </div>
+      </div>
+
+      {/* SECTION: Visual Pill & Packet Recognition */}
+      <div className="mt-8 pt-6 border-t border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-xl font-bold text-teal-950 flex items-center gap-2">
-              <span>👁️ Medicine & Packet Visual Appearance</span>
-              <span className="text-xs bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full font-bold">
-                Senior Memory Aid
-              </span>
+            <h3 className="text-xl font-bold text-teal-950">
+              Medicine & Packet Visual Identification
             </h3>
-            <p className="text-sm text-gray-600 mt-0.5">
-              Helps seniors easily identify the right tablet and blister strip among multiple boxes.
+            <p className="text-sm text-slate-600 mt-0.5">
+              Helps seniors match the tablet and blister strip to physical packaging.
             </p>
           </div>
-          <button
-            type="button"
-            className="text-sm font-semibold text-teal-700 hover:text-teal-900 p-1 flex items-center gap-1"
-            onClick={() =>
-              speakText(
-                'Dawai kaisi dikhti hai, yeh suniye ya select kijiye. Isse aap galat goli lene se bachenge.',
-                'hi'
-              )
-            }
-          >
-            <span>🔊</span> <span>Pehchan Suniye</span>
-          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Pill Appearance */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
             <label className="block text-base font-bold text-slate-900 mb-2">
-              ⚪ Pill Visual Description (Goli ka aakaar aur rang):
+              Pill Visual Description:
             </label>
             <input
               value={values.pillAppearance || ''}
               onChange={(e) => set('pillAppearance', e.target.value)}
               placeholder="e.g. Small round white tablet, scored in center"
-              className="w-full p-3 text-base rounded-xl border-2 border-gray-300 focus:border-teal-600 outline-none mb-3 bg-white"
+              className="w-full p-3 text-base rounded-xl border border-gray-300 focus:border-teal-600 outline-none mb-3 bg-white"
             />
-            {/* Quick Pill Presets */}
-            <div className="text-xs font-semibold text-gray-600 mb-1.5">Quick Presets (Click to choose):</div>
+            <div className="text-xs font-semibold text-slate-600 mb-1.5">Common Presets:</div>
             <div className="flex flex-wrap gap-1.5">
               {PILL_PRESETS.map((p) => (
                 <button
@@ -444,7 +447,7 @@ export default function MedicationForm({
                   type="button"
                   className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
                     values.pillAppearance === p.value
-                      ? 'bg-teal-600 text-white border-teal-600 font-bold'
+                      ? 'bg-teal-700 text-white border-teal-700 font-bold'
                       : 'bg-white text-gray-800 border-gray-300 hover:bg-teal-50'
                   }`}
                   onClick={() => set('pillAppearance', p.value)}
@@ -455,19 +458,17 @@ export default function MedicationForm({
             </div>
           </div>
 
-          {/* Packet / Blister Appearance */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
             <label className="block text-base font-bold text-slate-900 mb-2">
-              🥈 Packet / Strip Appearance (Dawai ka patta kaisa hai):
+              Packet / Blister Strip Appearance:
             </label>
             <input
               value={values.packetAppearance || ''}
               onChange={(e) => set('packetAppearance', e.target.value)}
               placeholder="e.g. Silver foil strip with blue band (10 tablets)"
-              className="w-full p-3 text-base rounded-xl border-2 border-gray-300 focus:border-teal-600 outline-none mb-3 bg-white"
+              className="w-full p-3 text-base rounded-xl border border-gray-300 focus:border-teal-600 outline-none mb-3 bg-white"
             />
-            {/* Quick Packet Presets */}
-            <div className="text-xs font-semibold text-gray-600 mb-1.5">Quick Presets (Click to choose):</div>
+            <div className="text-xs font-semibold text-slate-600 mb-1.5">Common Presets:</div>
             <div className="flex flex-wrap gap-1.5">
               {PACKET_PRESETS.map((p) => (
                 <button
@@ -475,7 +476,7 @@ export default function MedicationForm({
                   type="button"
                   className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
                     values.packetAppearance === p.value
-                      ? 'bg-teal-600 text-white border-teal-600 font-bold'
+                      ? 'bg-teal-700 text-white border-teal-700 font-bold'
                       : 'bg-white text-gray-800 border-gray-300 hover:bg-teal-50'
                   }`}
                   onClick={() => set('packetAppearance', p.value)}
@@ -485,43 +486,6 @@ export default function MedicationForm({
               ))}
             </div>
           </div>
-        </div>
-
-        {/* Live Visual Card Preview */}
-        <div className="mt-4 p-4 rounded-2xl bg-teal-50/40 border border-teal-200 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-white border border-teal-300 flex items-center justify-center text-2xl shadow-sm">
-              {values.pillAppearance?.toLowerCase().includes('capsule')
-                ? '💊'
-                : values.pillAppearance?.toLowerCase().includes('peach') || values.pillAppearance?.toLowerCase().includes('pink')
-                ? '🍑'
-                : values.pillAppearance?.toLowerCase().includes('yellow')
-                ? '🟡'
-                : '⚪'}
-            </div>
-            <div>
-              <div className="text-sm font-bold text-teal-950">Visual Identification Preview:</div>
-              <div className="text-xs text-gray-700">
-                Pill: <span className="font-semibold">{values.pillAppearance || 'Standard white tablet'}</span>
-              </div>
-              <div className="text-xs text-gray-700">
-                Packet: <span className="font-semibold">{values.packetAppearance || 'Standard blister pack'}</span>
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="text-xs font-bold text-teal-800 bg-white px-3 py-1.5 rounded-lg border border-teal-300 hover:bg-teal-100"
-            onClick={() =>
-              speakText(
-                `Pehchan: Goli ${values.pillAppearance || 'safed tablet'} hai. Aur packet ${values.packetAppearance || 'blister strip'} hai.`,
-                'hi'
-              )
-            }
-          >
-            🔊 Suniye (Listen)
-          </button>
         </div>
       </div>
 
@@ -536,10 +500,10 @@ export default function MedicationForm({
         </button>
         <button
           type="button"
-          className="px-8 py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-lg transition-colors shadow-lg shadow-teal-700/20"
+          className="px-8 py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-lg transition-colors shadow-md"
           onClick={validateAndSubmit}
         >
-          {existing ? '✓ Save Changes' : '✓ Add Medication & Notify Caregiver'}
+          {existing ? 'Save Changes' : 'Add Medication & Notify Caregiver'}
         </button>
       </div>
     </div>

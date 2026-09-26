@@ -33,6 +33,9 @@ export function createDefaultState(): AppState {
         packetAppearance: 'Silver aluminium strip with green & black text (10 tablets)',
         imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300&q=80',
         packetImageUrl: 'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=300&q=80',
+        useCase: 'Blood pressure control & cardiovascular protection',
+        foodTips: 'Take with or right after breakfast with water. Avoid grapefruit.',
+        sideEffects: 'Mild ankle swelling or light dizziness on standing up quickly.',
       },
       {
         id: 'm2', name: 'Aspirin', strength: '75 mg', dose: '1 tablet',
@@ -43,6 +46,9 @@ export function createDefaultState(): AppState {
         packetAppearance: 'Silver push-through foil strip with bold red stripe "Ecosprin 75"',
         imageUrl: 'https://images.unsplash.com/photo-1550572017-edd951aa8f72?w=300&q=80',
         packetImageUrl: 'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=300&q=80',
+        useCase: 'Prevents arterial blood clots and stroke',
+        foodTips: 'Always take after food to protect stomach lining. Never take with Ibuprofen.',
+        sideEffects: 'Mild stomach irritation, easy bruising. Consult doctor if bleeding occurs.',
       },
       {
         id: 'm3', name: 'Metformin', strength: '500 mg', dose: '1 tablet',
@@ -53,6 +59,9 @@ export function createDefaultState(): AppState {
         packetAppearance: 'Silver blister strip with blue background band (15 tablets)',
         imageUrl: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=300&q=80',
         packetImageUrl: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=300&q=80',
+        useCase: 'Blood glucose regulation for Type 2 Diabetes',
+        foodTips: 'Take immediately with or after food to prevent upset stomach.',
+        sideEffects: 'Mild nausea, abdominal fullness, or loose motions in initial weeks.',
       },
       {
         id: 'm4', name: 'Metformin', strength: '500 mg', dose: '1 tablet',
@@ -63,6 +72,9 @@ export function createDefaultState(): AppState {
         packetAppearance: 'Silver blister strip with blue background band (15 tablets)',
         imageUrl: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=300&q=80',
         packetImageUrl: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=300&q=80',
+        useCase: 'Evening glucose control & overnight stability',
+        foodTips: 'Take right after dinner with water.',
+        sideEffects: 'Mild stomach discomfort. Take with meal to reduce symptoms.',
       },
     ],
     events: [
