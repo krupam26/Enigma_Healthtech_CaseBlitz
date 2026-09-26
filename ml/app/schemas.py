@@ -33,6 +33,7 @@ class PrescriptionExtraction(BaseModel):
         ge=0.0,
         le=1.0
     )
+    extraction_source: Literal["medical-prescription-ocr", "gemini"] = "gemini"
 
 
 class AdherenceEvent(BaseModel):

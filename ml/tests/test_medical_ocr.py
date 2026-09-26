@@ -21,6 +21,7 @@ def test_line_crop_ocr_is_primary_and_requires_verification(monkeypatch, tmp_pat
 
     assert result.medications
     assert result.medications[0].requires_verification is True
+    assert result.extraction_source == "medical-prescription-ocr"
     assert "Medical-Prescription-OCR" in result.warnings[0]
 
 
@@ -49,3 +50,4 @@ def test_gemini_is_fallback_when_specialized_ocr_is_unavailable(
 
     assert result.medications[0].name == "Metformin"
     assert result.medications[0].requires_verification is True
+    assert result.extraction_source == "gemini"

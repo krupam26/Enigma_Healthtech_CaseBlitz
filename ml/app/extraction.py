@@ -135,6 +135,7 @@ def _extract_with_gemini(image_path: str) -> PrescriptionExtraction:
         if not all(required_fields) or medication.confidence < 0.75:
             medication.requires_verification = True
 
+    extraction.extraction_source = "gemini"
     return extraction
 
 
@@ -160,7 +161,8 @@ def _extract_with_medical_ocr(image_path: str) -> PrescriptionExtraction:
             "Medical-Prescription-OCR extracted line text. "
             "Verify each medication and all instructions before scheduling."
         ],
-        overall_confidence=0.5
+        overall_confidence=0.5,
+        extraction_source="medical-prescription-ocr"
     )
 
 
