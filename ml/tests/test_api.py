@@ -87,3 +87,14 @@ def test_chat_refuses_clinical_decisions():
 
     assert response.status_code == 200
     assert "cannot" in response.json()["answer"].lower()
+
+
+def test_manual_medication_fallback_requires_verification():
+    response = client.post(
+        "/ai/manual-medication",
+        json={"name": "Metformin"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["medication"]["name"] == "Metformin"
+    assert response.json()["medication"]["requires_verification"] is True

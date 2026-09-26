@@ -104,3 +104,13 @@ class PrescriptionAdherenceRequest(BaseModel):
     start_date: date
     days: int = Field(default=1, ge=1, le=365)
     user_timezone: str = Field(default="UTC", min_length=1, max_length=64)
+
+
+class ManualMedicationRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    strength: Optional[str] = Field(default=None, max_length=100)
+    dose: Optional[float] = Field(default=None, gt=0)
+    unit: Optional[str] = Field(default=None, max_length=30)
+    frequency: Optional[str] = Field(default=None, max_length=100)
+    timing: Optional[str] = Field(default=None, max_length=100)
+    duration: Optional[str] = Field(default=None, max_length=100)

@@ -22,7 +22,9 @@ from app.schemas import (
     ChatRequest,
     SummaryRequest,
     PrescriptionAdherenceRequest,
-    PrescriptionExtraction
+    PrescriptionExtraction,
+    ManualMedicationRequest,
+    Medication
 )
 from app.pipeline import prescription_to_adherence_events
 
@@ -70,7 +72,19 @@ async def _extract_uploaded_file(file: UploadFile):
         try:
             extraction = extract_prescription(prepared_path)
         except PrescriptionExtractionError as error:
-            raise HTTPException(status_code=502, detail=str(error)) from error
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "prescription_extraction_unavailable",
+                    "manual_entry_required": True,
+                    "message": (
+                        "We couldn't read the prescription. Please enter "
+                        "the medication name manually and verify the "
+                        "remaining instructions."
+                    ),
+                    "manual_entry_endpoint": "/ai/manual-medication"
+                }
+            ) from error
         extraction = normalize_prescription(extraction)
         return extraction, quality
 
@@ -112,6 +126,28 @@ async def extract_prescriptions_api(files: List[UploadFile] = File(...)):
         "prescription": merged.model_dump(),
         "safety_alerts": run_safety_checks(merged.medications),
         "image_quality": quality_reports
+    }
+
+
+@app.post("/ai/manual-medication")
+async def manual_medication_api(payload: ManualMedicationRequest):
+    medication = Medication(
+        name=payload.name.strip(),
+        strength=payload.strength,
+        dose=payload.dose,
+        unit=payload.unit,
+        frequency=payload.frequency,
+        timing=payload.timing,
+        duration=payload.duration,
+        requires_verification=True
+    )
+    return {
+        "medication": medication.model_dump(),
+        "manual_entry_required": True,
+        "message": (
+            "Medication name recorded. Verify the prescription details "
+            "before creating a schedule."
+        )
     }
 
 
