@@ -33,11 +33,36 @@ medication-specific instructions or contact a healthcare professional.
 Use the user's medication context when answering.
 """
 
+BOUNDARY_RESPONSE = (
+    "I can explain the existing prescription and adherence information, "
+    "but I cannot diagnose, prescribe, change doses, or tell you to stop "
+    "a medication. Please contact your prescriber or pharmacist for that."
+)
+
+
+def is_clinical_decision_request(question: str) -> bool:
+    question = question.lower()
+    restricted_phrases = (
+        "diagnose",
+        "what disease",
+        "prescribe",
+        "change my dose",
+        "increase my dose",
+        "decrease my dose",
+        "stop taking",
+        "stop my medication",
+        "double my dose"
+    )
+    return any(phrase in question for phrase in restricted_phrases)
+
 
 def medication_chat(
     question: str,
     medication_context: str
 ):
+    if is_clinical_decision_request(question):
+        return BOUNDARY_RESPONSE
+
     prompt = f"""
 {SYSTEM_PROMPT}
 
