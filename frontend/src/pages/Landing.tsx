@@ -4,37 +4,6 @@ import MarketingLayout from '../layouts/MarketingLayout'
 import Pill3D from '../components/Pill3D'
 import { useT } from '../hooks/useT'
 
-const PROBLEMS = [
-  ['Multiple medications', 'Different strengths, timings and instructions from different visits pile up without a single view.'],
-  ['Several doctors', "Each prescriber sees one part of the picture — not what else is already being taken."],
-  ['OTC additions', 'A painkiller or antacid picked up without checking it against existing prescriptions.'],
-  ['Missed doses', "A skipped dose raises a real question — take it now, wait, or skip — that's easy to get wrong."],
-  ['Timing confusion', '"After food," "twice daily," "as needed" — instructions that are simple to misread when tired.'],
-  ['Caregiver blind spots', "Family helping out often can't see what was actually taken versus skipped."],
-]
-
-const STEPS: [string, string, string][] = [
-  ['01', 'Upload', 'Add a prescription photo, PDF, or enter medicines by hand.'],
-  ['02', 'Understand', 'MedCheck reads and structures dose, frequency and timing.'],
-  ['03', 'Verify', 'Low-confidence fields are flagged for you to confirm — never guessed.'],
-  ['04', 'Personalize', 'Reminders align to your wake, sleep and meal times.'],
-  ['05', 'Stay safe', "Every new medicine is checked against what you're already taking."],
-  ['06', 'Track', 'Doses are logged taken, missed or late — adherence builds automatically.'],
-  ['07', 'Coordinate', 'Share exactly what you choose with a trusted caregiver.'],
-]
-
-const FEATURES = [
-  ['Prescription Intelligence', 'Extracts medicine, strength, dose and timing from photos or PDFs — flagged for review, never assumed.'],
-  ['Medication Management', 'Add, edit, pause or discontinue medications, with a full history of changes.'],
-  ['Smart Reminders', 'Timing built around your own wake, sleep and meal schedule.'],
-  ['Medication Safety', 'Checks interactions, duplicates and allergy conflicts across every prescriber.'],
-  ['OTC Safety', 'Anything self-added gets checked against your active medications before you take it.'],
-  ['Missed-Dose Guidance', 'Structured, cautious guidance — never a blanket "take it now."'],
-  ['Adherence Tracking', 'Daily, weekly and per-medication adherence, with patterns surfaced plainly.'],
-  ['Caregiver Coordination', 'Invite a caregiver and choose exactly what they can see.'],
-  ['AI Assistant', 'Ask about your medicines and schedule in your own language.'],
-]
-
 export default function Landing() {
   const t = useT()
   const heroRef = useRef<HTMLDivElement>(null)
@@ -54,116 +23,132 @@ export default function Landing() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  const problems = [
+    { title: t('landing.p1_title'), desc: t('landing.p1_desc') },
+    { title: t('landing.p2_title'), desc: t('landing.p2_desc') },
+    { title: t('landing.p3_title'), desc: t('landing.p3_desc') },
+    { title: t('landing.p4_title'), desc: t('landing.p4_desc') },
+    { title: t('landing.p5_title'), desc: t('landing.p5_desc') },
+    { title: t('landing.p6_title'), desc: t('landing.p6_desc') },
+  ]
+
+  const steps = [
+    { num: '01', title: t('landing.s1_title'), desc: t('landing.s1_desc') },
+    { num: '02', title: t('landing.s2_title'), desc: t('landing.s2_desc') },
+    { num: '03', title: t('landing.s3_title'), desc: t('landing.s3_desc') },
+    { num: '04', title: t('landing.s4_title'), desc: t('landing.s4_desc') },
+    { num: '05', title: t('landing.s5_title'), desc: t('landing.s5_desc') },
+  ]
+
   return (
     <MarketingLayout>
-      <section ref={heroRef} className="relative min-h-[92vh] flex items-center overflow-hidden">
-        <div className="wrap grid gap-10 items-center" style={{ gridTemplateColumns: '1fr 480px' }}>
+      {/* HERO SECTION */}
+      <section ref={heroRef} className="relative min-h-[85vh] flex items-center bg-gradient-to-b from-white to-slate-50 overflow-hidden py-12">
+        <div className="max-w-[1240px] mx-auto px-6 sm:px-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
-            <div className="text-[13px] font-semibold text-teal-600 mb-[18px]">{t('hero.eyebrow')}</div>
-            <h1 className="font-display font-medium leading-[1.03] tracking-tight text-teal-950" style={{ fontSize: 'clamp(40px,4.6vw,68px)' }}>
+            <div className="inline-block text-sm font-extrabold uppercase tracking-wider text-teal-800 bg-teal-100/80 px-4 py-1.5 rounded-full mb-5">
+              {t('hero.eyebrow')}
+            </div>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-teal-950 leading-[1.12] tracking-tight">
               {t('hero.title')}
             </h1>
-            <p className="mt-[22px] text-[19px] leading-[1.55] text-inksoft max-w-[440px]">{t('hero.description')}</p>
-            <div className="mt-[34px] flex gap-3.5">
-              <Link to="/signup" className="btn-primary">{t('hero.getStarted')}</Link>
-              <a href="#how" className="btn-ghost">{t('hero.explore')}</a>
+            <p className="mt-5 text-xl text-slate-700 leading-relaxed max-w-xl">
+              {t('hero.description')}
+            </p>
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link
+                to="/signup"
+                className="px-8 py-4 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-lg shadow-lg hover:scale-105 transition-all"
+              >
+                {t('hero.getStarted')}
+              </Link>
+              <a
+                href="#problems"
+                className="px-7 py-4 rounded-2xl border-2 border-slate-300 hover:border-teal-700 font-bold text-lg text-slate-800 bg-white hover:bg-teal-50 transition-all"
+              >
+                {t('hero.explore')}
+              </a>
             </div>
           </div>
-          <Pill3D progress={progress} height={520} />
+          <div className="flex justify-center">
+            <Pill3D progress={progress} height={460} />
+          </div>
         </div>
       </section>
 
-      <section className="py-[90px]">
-        <div className="wrap">
-          <h2 className="font-display font-medium tracking-tight text-teal-950" style={{ fontSize: 'clamp(28px,3vw,42px)' }}>
-            Most medication routines aren't planned. They accumulate.
+      {/* PROBLEMS SECTION */}
+      <section id="problems" className="py-20 bg-white border-t border-slate-200">
+        <div className="max-w-[1240px] mx-auto px-6 sm:px-10">
+          <div className="max-w-3xl">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-teal-950 tracking-tight">
+              {t('landing.problemsTitle')}
+            </h2>
+            <p className="mt-3 text-lg text-slate-600 leading-relaxed">
+              {t('landing.problemsSub')}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+            {problems.map((p, idx) => (
+              <div
+                key={idx}
+                className="p-6 rounded-3xl border-2 border-slate-200 bg-slate-50/50 hover:border-teal-400 hover:bg-white transition-all shadow-xs"
+              >
+                <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-900 font-black text-base flex items-center justify-center mb-4">
+                  0{idx + 1}
+                </div>
+                <h3 className="text-xl font-bold text-teal-950 mb-2">{p.title}</h3>
+                <p className="text-base text-slate-600 leading-relaxed">{p.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS / STEPS */}
+      <section id="features" className="py-20 bg-slate-50 border-t border-slate-200">
+        <div className="max-w-[1240px] mx-auto px-6 sm:px-10">
+          <div className="max-w-2xl">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-teal-950 tracking-tight">
+              {t('landing.stepsTitle')}
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+            {steps.map((s) => (
+              <div
+                key={s.num}
+                className="p-7 rounded-3xl bg-white border-2 border-teal-200 shadow-sm flex flex-col justify-between"
+              >
+                <div>
+                  <span className="text-sm font-black text-teal-700 uppercase tracking-widest block mb-2">
+                    Step {s.num}
+                  </span>
+                  <h3 className="text-2xl font-extrabold text-teal-950 mb-2">{s.title}</h3>
+                  <p className="text-base text-slate-700 leading-relaxed">{s.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CALL TO ACTION */}
+      <section className="py-20 bg-teal-950 text-white">
+        <div className="max-w-[1240px] mx-auto px-6 sm:px-10 text-center">
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight max-w-3xl mx-auto">
+            {t('landing.ctaTitle')}
           </h2>
-          <p className="mt-3.5 text-[17px] text-inksoft max-w-[560px] leading-relaxed">
-            A prescription here, an over-the-counter painkiller there, a dose taken an hour late — none of it feels risky on its own.
+          <p className="mt-4 text-xl text-teal-200 max-w-2xl mx-auto">
+            {t('landing.ctaSub')}
           </p>
-          <div className="grid grid-cols-3 gap-5 mt-12">
-            {PROBLEMS.map(([title, body], i) => (
-              <div key={title} className="p-6 rounded-[18px] border border-line bg-paper">
-                <div className="text-[13px] font-semibold text-teal-600 mb-2.5">{String(i + 1).padStart(2, '0')}</div>
-                <p className="text-[15px] text-inksoft leading-relaxed">{body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="h-[220px] flex items-center justify-center overflow-hidden">
-        <Pill3D progress={0.08} height={220} />
-      </div>
-
-      <section id="how" className="py-[90px]">
-        <div className="wrap">
-          <h2 className="font-display font-medium tracking-tight text-teal-950" style={{ fontSize: 'clamp(28px,3vw,42px)' }}>How MedCheck works</h2>
-          <p className="mt-3.5 text-[17px] text-inksoft max-w-[560px] leading-relaxed">Seven steps that turn a prescription into a routine you can actually follow.</p>
-          <div className="grid grid-cols-4 mt-14 border-t border-line">
-            {STEPS.map(([num, title, body]) => (
-              <div key={num} className="pt-7 px-5 border-r border-line last:border-r-0">
-                <div className="font-display text-[34px] text-mint-300 font-medium">{num}</div>
-                <h4 className="mt-2 text-[16px] font-semibold text-teal-950">{title}</h4>
-                <p className="mt-1.5 text-[14px] text-inksoft leading-relaxed">{body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="features" className="py-[90px]">
-        <div className="wrap">
-          <h2 className="font-display font-medium tracking-tight text-teal-950" style={{ fontSize: 'clamp(28px,3vw,42px)' }}>Everything a routine needs, nothing it doesn't</h2>
-          <div className="grid grid-cols-3 gap-5 mt-12">
-            {FEATURES.map(([title, body]) => (
-              <div key={title} className="p-6 rounded-2xl border border-line bg-paper hover:border-teal-500 transition-colors">
-                <h4 className="text-[16px] font-semibold text-teal-950">{title}</h4>
-                <p className="mt-2 text-[14px] text-inksoft leading-relaxed">{body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="h-[220px] flex items-center justify-center overflow-hidden">
-        <Pill3D progress={0.08} height={220} />
-      </div>
-
-      <section id="safety" className="py-[90px]">
-        <div className="wrap">
-          <h2 className="font-display font-medium tracking-tight text-teal-950" style={{ fontSize: 'clamp(28px,3vw,42px)' }}>
-            A safety engine that says "I don't know" when it means it
-          </h2>
-          <p className="mt-3.5 text-[17px] text-inksoft max-w-[560px] leading-relaxed">
-            Unknown is never treated as safe. Every check ends in one of four plain statuses, with a reason attached.
-          </p>
-          <div className="grid grid-cols-2 gap-5 mt-12">
-            <div className="card"><span className="badge badge-taken mb-2.5 inline-block">No flag identified</span><p className="text-inksoft text-[14.5px]">Nothing in the current combination raises a concern based on the available information.</p></div>
-            <div className="card"><span className="badge badge-late mb-2.5 inline-block">Review</span><p className="text-inksoft text-[14.5px]">Worth a second look — for example, two medicines from different doctors with overlapping purposes.</p></div>
-            <div className="card"><span className="badge badge-missed mb-2.5 inline-block">Potential risk</span><p className="text-inksoft text-[14.5px]">A known interaction or duplicate active ingredient was found.</p></div>
-            <div className="card"><span className="badge badge-upcoming mb-2.5 inline-block">Urgent attention</span><p className="text-inksoft text-[14.5px]">Contact a healthcare professional before continuing with this combination.</p></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="caregiver" className="py-[90px]">
-        <div className="wrap">
-          <h2 className="font-display font-medium tracking-tight text-teal-950" style={{ fontSize: 'clamp(28px,3vw,42px)' }}>Caregivers see what you choose, nothing more</h2>
-          <p className="mt-3.5 text-[17px] text-inksoft max-w-[560px] leading-relaxed">
-            Invite a caregiver, and switch on only the categories you're comfortable sharing — adherence, missed-dose alerts, schedule, medication details. Revoke access anytime.
-          </p>
-        </div>
-      </section>
-
-      <section id="about" className="py-[90px]">
-        <div className="wrap">
-          <div className="bg-teal-950 rounded-[28px] px-14 py-[72px] flex items-center justify-between gap-10 text-white">
-            <div>
-              <h2 className="font-display font-medium text-white" style={{ fontSize: 'clamp(28px,3vw,42px)' }}>Bring your medication routine into one place.</h2>
-              <p className="mt-3 text-white/70 max-w-[420px]">Built for people managing more than one medicine — and the people helping them.</p>
-            </div>
-            <Link to="/signup" className="btn-primary bg-white text-teal-950 hover:bg-white">{t('hero.getStarted')}</Link>
+          <div className="mt-8 flex justify-center">
+            <Link
+              to="/signup"
+              className="px-9 py-4 rounded-2xl bg-teal-500 hover:bg-teal-400 text-teal-950 font-black text-lg shadow-xl hover:scale-105 transition-all"
+            >
+              {t('landing.ctaButton')}
+            </Link>
           </div>
         </div>
       </section>

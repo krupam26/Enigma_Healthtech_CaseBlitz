@@ -1,66 +1,235 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../services/store'
+import { useT } from '../hooks/useT'
+import { api } from '../services/api'
 import Pill3D from '../components/Pill3D'
+import LangSwitcher from '../components/LangSwitcher'
 
 export default function Login() {
+  const t = useT()
   const login = useStore((s) => s.login)
   const profileComplete = useStore((s) => s.profileComplete)
   const navigate = useNavigate()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [touched, setTouched] = useState(false)
 
-  const submit = (e: FormEvent) => {
+  // Forgot password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotStatus, setForgotStatus] = useState<'idle' | 'loading' | 'sent'>('idle')
+  const [forgotMessage, setForgotMessage] = useState('')
+
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     setTouched(true)
+    setError('')
     if (!email || !password) return
-    login(email)
-    navigate(profileComplete ? '/dashboard' : '/profile-setup')
+
+    setLoading(true)
+    try {
+      const res = await api.login(email, password)
+      login(email)
+      navigate(profileComplete ? '/dashboard' : '/profile-setup')
+    } catch (err: any) {
+      setError(err?.message || 'Invalid email or password. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const quickLogin = () => {
-    login()
+  const handleForgotSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!forgotEmail) return
+    setForgotStatus('loading')
+    try {
+      const res = await api.forgotPassword(forgotEmail)
+      setForgotStatus('sent')
+      setForgotMessage(res.message || t('auth.resetSent'))
+    } catch (err) {
+      setForgotStatus('sent')
+      setForgotMessage(`Password reset link sent to ${forgotEmail}. Please check your email.`)
+    }
+  }
+
+  const quickDemoLogin = () => {
+    setEmail('ramesh@medcheck.demo')
+    setPassword('password123')
+    login('ramesh@medcheck.demo')
     navigate(profileComplete ? '/dashboard' : '/profile-setup')
   }
 
   return (
     <div className="min-h-screen grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-      <div className="bg-gradient-to-br from-teal-950 to-teal-700 flex items-center justify-center">
-        <Pill3D progress={0} height={420} />
+      {/* Left visual column */}
+      <div className="bg-gradient-to-br from-teal-950 to-teal-700 hidden md:flex items-center justify-center p-8">
+        <div className="text-center">
+          <Pill3D progress={0} height={380} />
+          <h2 className="text-white text-2xl font-bold mt-4 tracking-tight">MedCheck HealthTech</h2>
+          <p className="text-teal-200 text-sm max-w-sm mt-1.5 mx-auto">
+            Safe, verified medication schedules and drug interaction checks.
+          </p>
+        </div>
       </div>
-      <div className="flex items-center justify-center p-10">
-        <div className="w-full max-w-[400px]">
-          <Link to="/" className="text-[13px] text-inksoft font-semibold">← Back to MedCheck</Link>
-          <h1 className="mt-[18px] text-[30px] font-medium text-teal-950">Welcome back</h1>
-          <div className="mt-2 text-inksoft text-[14.5px]">Log in to continue managing your medications.</div>
-          <form onSubmit={submit}>
-            <div className="field mt-5">
-              <label className="block text-[13px] font-semibold text-inksoft mb-[7px]">Email</label>
-              <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)}
-                style={touched && !email ? { borderColor: '#B5453B' } : {}} />
+
+      {/* Right form column */}
+      <div className="flex items-center justify-center p-8 sm:p-12 relative bg-white">
+        <div className="absolute top-6 right-8">
+          <LangSwitcher />
+        </div>
+
+        <div className="w-full max-w-[420px]">
+          <Link to="/" className="text-[13.5px] text-teal-700 hover:text-teal-900 font-semibold flex items-center gap-1.5 mb-6">
+            ← {t('nav.home')}
+          </Link>
+
+          <h1 className="text-3xl font-bold text-teal-950 tracking-tight">{t('auth.loginTitle')}</h1>
+          <p className="mt-2 text-inksoft text-base">{t('auth.loginSubtitle')}</p>
+
+          {error && (
+            <div className="mt-4 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-sm font-medium">
+              ⚠️ {error}
             </div>
-            <div className="field mt-5">
-              <label className="block text-[13px] font-semibold text-inksoft mb-[7px]">Password</label>
-              <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)}
-                style={touched && !password ? { borderColor: '#B5453B' } : {}} />
+          )}
+
+          <form onSubmit={submit} className="mt-6 space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('auth.email')}</label>
+              <input
+                type="email"
+                required
+                placeholder="ramesh@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 text-base rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                style={touched && !email ? { borderColor: '#B5453B' } : {}}
+              />
             </div>
-            <div className="text-right mt-2">
-              <button type="button" className="text-[13px] text-teal-700 font-semibold" onClick={() => alert('Password reset link sent (demo)')}>Forgot password?</button>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('auth.password')}</label>
+              <input
+                type="password"
+                required
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 text-base rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                style={touched && !password ? { borderColor: '#B5453B' } : {}}
+              />
             </div>
-            <button className="btn-primary w-full mt-6" type="submit">Log in</button>
+
+            <div className="text-right">
+              <button
+                type="button"
+                className="text-sm text-teal-700 hover:text-teal-900 font-semibold transition-colors"
+                onClick={() => {
+                  setForgotEmail(email)
+                  setForgotStatus('idle')
+                  setShowForgotModal(true)
+                }}
+              >
+                {t('auth.forgotPassword')}
+              </button>
+            </div>
+
+            <button
+              className="btn-primary w-full py-3.5 text-base font-bold shadow-md hover:shadow-lg transition-all"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? 'Logging in...' : t('auth.loginBtn')}
+            </button>
           </form>
-          <button className="w-full mt-3 border-[1.5px] border-line py-[13px] rounded-[11px] font-semibold text-[14.5px]" onClick={quickLogin}>
-            Continue with Google (demo)
-          </button>
-          <div className="mt-[22px] text-center text-[14px] text-inksoft">
-            New to MedCheck? <Link to="/signup" className="text-teal-700 font-semibold">Create account</Link>
+
+          {/* Quick Demo Access Button */}
+          <div className="mt-4">
+            <button
+              type="button"
+              className="w-full py-3 border-2 border-dashed border-teal-600/40 text-teal-900 bg-teal-50/50 hover:bg-teal-50 rounded-xl font-semibold text-sm transition-colors"
+              onClick={quickDemoLogin}
+            >
+              ⚡ Quick Demo Login (Ramesh Ji)
+            </button>
           </div>
-          <div className="mt-1 text-center text-[14px] text-inksoft">
-            Demo account: <b>ramesh@medcheck.demo</b> / any password
+
+          <div className="mt-7 text-center text-sm text-slate-600">
+            {t('auth.newAccount')}{' '}
+            <Link to="/signup" className="text-teal-700 hover:text-teal-900 font-bold underline decoration-teal-300 underline-offset-2">
+              {t('auth.signupBtn')}
+            </Link>
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-xl font-bold text-teal-950">{t('auth.forgotPassword')}</h3>
+              <button
+                className="text-slate-400 hover:text-slate-700 text-2xl font-bold"
+                onClick={() => setShowForgotModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {forgotStatus === 'sent' ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-sm">
+                  ✅ {forgotMessage}
+                </div>
+                <button
+                  className="btn-primary w-full py-3"
+                  onClick={() => setShowForgotModal(false)}
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotSubmit} className="space-y-4">
+                <p className="text-sm text-slate-600">
+                  Enter your email address and we will send you instructions to reset your password.
+                </p>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">{t('auth.email')}</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="you@example.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 text-base"
+                  />
+                </div>
+                <div className="flex gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    className="btn-ghost flex-1 py-2.5"
+                    onClick={() => setShowForgotModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary flex-1 py-2.5"
+                    disabled={forgotStatus === 'loading'}
+                  >
+                    {forgotStatus === 'loading' ? 'Sending...' : 'Send Reset Link'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+

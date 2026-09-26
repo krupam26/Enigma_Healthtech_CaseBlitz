@@ -2,6 +2,8 @@ import { useState } from 'react'
 import type { DoseEvent, Medication } from '../types'
 import Badge from './Badge'
 import { speakReminder, speakMedicationCard } from '../utils/speech'
+import { useStore } from '../services/store'
+import { useT } from '../hooks/useT'
 
 export function TimelineRow({
   event,
@@ -14,6 +16,8 @@ export function TimelineRow({
   onMark: (status: DoseEvent['status']) => void
   onShowAdvice?: (doseId: string, medName: string) => void
 }) {
+  const lang = useStore((s) => s.lang)
+  const t = useT()
   const isTaken = event.status === 'Taken'
   const isMissed = event.status === 'Missed'
 
@@ -23,8 +27,8 @@ export function TimelineRow({
         <span>{event.time}</span>
         <button
           className="text-base hover:scale-110 transition-transform p-1 rounded-full hover:bg-teal-100 text-teal-800"
-          title="Listen in Hindi"
-          onClick={() => speakReminder(med.name, event.time, med.food, 'hi')}
+          title="Listen in your language"
+          onClick={() => speakReminder(med.name, event.time, med.food, lang)}
         >
           🔊
         </button>
@@ -56,7 +60,7 @@ export function TimelineRow({
           }`}
           onClick={() => onMark('Taken')}
         >
-          {isTaken ? 'Taken' : 'Mark taken'}
+          {isTaken ? t('dashboard.markTaken') : `✓ ${t('dashboard.markTaken')}`}
         </button>
         <button
           className={`px-3 py-2 rounded-xl text-sm font-bold border transition-all ${
@@ -71,12 +75,13 @@ export function TimelineRow({
             }
           }}
         >
-          {isMissed ? 'Missed (Advice)' : 'Missed'}
+          {isMissed ? `${t('dashboard.markMissed')} (Advice)` : t('dashboard.markMissed')}
         </button>
       </div>
     </div>
   )
 }
+
 
 export function MedicationCard({
   med,
